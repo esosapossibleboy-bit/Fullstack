@@ -2,7 +2,7 @@ import { useState, useEffect, createContext, useContext } from 'react';
 import { BrowserRouter, Routes, Route, Link, Navigate, useNavigate } from 'react-router-dom';
 import './App.css';
 
-const API = 'https://esosa-ecommerce.onrender.com'; // or http://localhost:5000
+const API = 'https://esosa-fullstack.onrender.com'; // or http://localhost:5000
 
 // === CONTEXTS ===
 const AuthContext = createContext();
