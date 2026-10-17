@@ -9,21 +9,27 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
-app.use(cors());
+
+// === FIX CORS FOR VERCEL ===
+app.use(cors({
+  origin: '*',
+  methods: ['GET','POST','DELETE','PUT'],
+  allowedHeaders: ['Content-Type','x-auth-token']
+}));
 app.use(express.json());
 
 // === CREATE UPLOADS FOLDER ===
 if (!fs.existsSync('uploads')) fs.mkdirSync('uploads');
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// === MULTER SETUP - Upload from Phone/Laptop ===
+// === MULTER SETUP ===
 const storage = multer.diskStorage({
   destination: (req,file,cb) => cb(null, 'uploads/'),
   filename: (req,file,cb) => cb(null, Date.now() + '-' + file.originalname.replace(/\s/g,''))
 });
 const upload = multer({ 
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req,file,cb) => {
     if(file.mimetype.startsWith('image/')) cb(null, true);
     else cb(new Error('Only images allowed'), false);
@@ -75,10 +81,8 @@ app.post('/api/auth/register', async (req,res)=>{
   const {email,password} = req.body;
   const check = isStrongPassword(password);
   if (!check.ok) return res.status(400).json({msg: check.msg});
-
   const exists = await User.findOne({email});
   if(exists) return res.status(400).json({msg:'User exists'});
-  
   const hashed = await bcrypt.hash(password,10);
   const isAdmin = email === 'esosa@test.com';
   const user = await User.create({email, password:hashed, isAdmin});
@@ -96,31 +100,47 @@ app.post('/api/auth/login', async (req,res)=>{
   res.json({token, user:{_id:user._id, email:user.email, isAdmin:user.isAdmin}});
 });
 
-// === UPLOAD IMAGE FROM PHONE/LAPTOP - NEW! ===
+// === UPLOAD ===
 app.post('/api/upload', auth, upload.single('image'), (req,res)=>{
   if(req.user.isAdmin !== true) return res.status(403).json({msg:'Admin only'});
   if(!req.file) return res.status(400).json({msg:'No file uploaded'});
-  
-  // This URL works both localhost and Render
   const imagePath = `/uploads/${req.file.filename}`;
-  const fullUrl = `${req.protocol}://${req.get('host')}${imagePath}`;
-  
-  res.json({ 
-    msg: 'Uploaded', 
-    path: imagePath,          // Use this: /uploads/123.jpg
-    imageUrl: fullUrl,        // Full URL for preview
-    localPath: `${process.env.API_URL || ''}${imagePath}` 
-  });
+  res.json({ msg: 'Uploaded', path: imagePath });
 });
 
-// Products
+// === PRODUCTS ===
 app.get('/api/products', async (req,res)=> res.json(await Product.find()));
+
 app.post('/api/products', auth, async (req,res)=>{
   if(!req.user.isAdmin) return res.status(403).json({msg:'Admin only'});
   res.json(await Product.create(req.body));
 });
 
-// Orders
+// === NEW CODE 1: DELETE SINGLE PRODUCT ===
+app.delete('/api/products/:id', auth, async (req,res)=>{
+  if(!req.user.isAdmin) return res.status(403).json({msg:'Admin only'});
+  await Product.findByIdAndDelete(req.params.id);
+  res.json({msg:'Product deleted'});
+});
+
+// === NEW CODE 2: CLEAN DUPLICATE PRODUCTS (ONE-TIME USE) ===
+app.delete('/api/products/clean/duplicates', auth, async (req,res)=>{
+  if(!req.user.isAdmin) return res.status(403).json({msg:'Admin only'});
+  const products = await Product.find();
+  const seen = new Map();
+  let deleted = 0;
+  for(const p of products){
+    if(seen.has(p.name)){
+      await Product.findByIdAndDelete(p._id);
+      deleted++;
+    } else {
+      seen.set(p.name, true);
+    }
+  }
+  res.json({msg:`Cleaned ${deleted} duplicates`, remaining: seen.size});
+});
+
+// === ORDERS ===
 app.post('/api/orders', auth, async (req,res)=>{
   const {items,total,email} = req.body;
   const order = await Order.create({userId:req.user.id, userEmail:email, items, total});
@@ -132,6 +152,6 @@ app.get('/api/orders/all', auth, async (req,res)=>{
   res.json(await Order.find());
 });
 
-app.get('/', (req,res)=> res.send('Esosa API Live - Strong Password + File Upload'));
+app.get('/', (req,res)=> res.send('Esosa API Live - Strong Password + File Upload + Clean Duplicates'));
 
 app.listen(process.env.PORT || 5000, ()=> console.log('Server running with Upload'));
