@@ -221,7 +221,7 @@ function Admin(){
     const data = await res.json(); if(data._id){ alert('Product Added ✅'); setName('');setPrice('');setImage('');setDesc('');setFile(null); } else alert(data.msg);
   };
 
-  const totalSales = orders.reduce((s,o)=>s+o.total,0);
+  const totalSales = orders.reduce((s,o)=>s+ (Number(o.total) || 0),0);
   return (
     <div style={{padding:20}}>
       <h2>Admin - Orders ({orders.length}) - Sales ${totalSales}</h2>
