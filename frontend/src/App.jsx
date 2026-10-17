@@ -5,7 +5,7 @@ import './App.css';
 const API = 'https://esosa-fullstack.onrender.com';
 
 // === PAYSTACK PUBLIC KEY - REPLACE WITH YOURS ===
-const PAYSTACK_PUBLIC_KEY = 'pk_test_xxxxxxxxxx'; // get from paystack dashboard
+const PAYSTACK_PUBLIC_KEY = 'pk_test_edc0318e6275da717dc8725207d8b986a9ba7856'; // get from paystack dashboard
 
 // === CONTEXTS ===
 const AuthContext = createContext();

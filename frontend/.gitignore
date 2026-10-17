@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+# backend/.gitignore and frontend/.gitignore or root .gitignore
+.env
+node_modules
+uploads/
