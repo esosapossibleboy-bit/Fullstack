@@ -22,6 +22,8 @@ const allowedOrigins = [
   'https://esosa-shop.vercel.app',
   'https://fullstack-orpin-three.vercel.app',
   'https://fullstack-lake-seven.vercel.app',
+  'https://fullstack2-i49ox4fax-esosatech.vercel.app',
+  'https://fullstack2-738c5aa6r-esosatech.vercel.app',
   'http://localhost:5173',
   'http://localhost:3000'
 ];
@@ -177,6 +179,15 @@ app.get('/api/products', async (req,res)=>{
   }catch{ res.status(500).json({msg:'Error'}) }
 });
 
+// ===== NEW - SINGLE PRODUCT FOR CLICKABLE DETAILS =====
+app.get('/api/products/:id', async (req,res)=>{
+  try{
+    const product = await Product.findById(req.params.id);
+    if(!product) return res.status(404).json({msg:'Product not found'});
+    res.json(product);
+  }catch{ res.status(500).json({msg:'Error fetching product'}) }
+});
+
 app.post('/api/products', auth, async (req,res)=>{
   try{
     if(!req.user.isAdmin) return res.status(403).json({msg:'Admin only'});
@@ -229,12 +240,10 @@ app.get('/api/orders/all', auth, async (req,res)=>{
   res.json(await Order.find().sort({createdAt:-1}));
 });
 
-// === NEW ROUTES - ORDER DETAILS + DELETE ORDER ===
 app.get('/api/orders/:id', auth, async (req,res)=>{
   try{
     const order = await Order.findById(req.params.id);
     if(!order) return res.status(404).json({msg:'Order not found'});
-    // User can see own order, admin can see all
     if(order.userId !== req.user.id && req.user.isAdmin !== true){
       return res.status(403).json({msg:'Not your order'});
     }
@@ -250,7 +259,7 @@ app.delete('/api/orders/:id', auth, async (req,res)=>{
   }catch{ res.status(500).json({msg:'Delete failed'}) }
 });
 
-app.get('/', (req,res)=> res.send('Esosa API Secure Live - Delete + Details Added ✅'));
+app.get('/', (req,res)=> res.send('Esosa API Secure Live - Clickable Products + Details Ready ✅'));
 
 // === ERROR HANDLER ===
 app.use((err, req, res, next)=>{
@@ -268,4 +277,4 @@ app.use((err, req, res, next)=>{
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, ()=> console.log(`🔒 SECURE Server Live on ${PORT} - Delete + Order Details Ready ✅`));
+app.listen(PORT, ()=> console.log(`🔒 SECURE Server Live on ${PORT} - Clickable Products Ready ✅`));

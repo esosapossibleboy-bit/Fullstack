@@ -56,18 +56,108 @@ function Store(){
       </div>
       <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))', gap:18}}>
         {products.map(p=>(
-          <div key={p._id} style={{border:'1px solid #ddd', padding:14, borderRadius:14, background:'white', boxShadow:'0 2px 8px rgba(0,0,0,0.06)'}}>
-            <img src={p.image?.startsWith('/uploads') ? `${API}${p.image}` : (p.image?.startsWith('https://') ? p.image : '')} onError={(e)=> e.target.style.display='none'} style={{width:'100%', height:180, objectFit:'cover', borderRadius:10}} alt={sanitize(p.name)} />
-            <span style={{fontSize:11, background:'#eee', padding:'3px 8px', borderRadius:6}}>{sanitize(p.category)}</span>
-            <h3 style={{margin:'8px 0'}}>{sanitize(p.name)}</h3>
-            <p style={{fontSize:13, color:'#555', minHeight:40}}>{sanitize(p.description) || 'No description'}</p>
-            <p style={{fontSize:18}}><b>${Number(p.price) || 0}</b></p>
+          <div key={p._id} style={{border:'1px solid #ddd', padding:14, borderRadius:14, background:'white', boxShadow:'0 2px 8px rgba(0,0,0,0.06)', cursor:'pointer', transition:'transform 0.2s'}} 
+               onMouseEnter={e=>e.currentTarget.style.transform='scale(1.02)'} 
+               onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'}>
+            {/* CLICKABLE - GOES TO DETAILS */}
+            <Link to={`/product/${p._id}`} style={{textDecoration:'none', color:'inherit'}}>
+              <img src={p.image?.startsWith('/uploads') ? `${API}${p.image}` : (p.image?.startsWith('https://') ? p.image : '')} onError={(e)=> e.target.style.display='none'} style={{width:'100%', height:180, objectFit:'cover', borderRadius:10}} alt={sanitize(p.name)} />
+              <span style={{fontSize:11, background:'#eee', padding:'3px 8px', borderRadius:6}}>{sanitize(p.category)}</span>
+              <h3 style={{margin:'8px 0', color:'black'}}>{sanitize(p.name)}</h3>
+              <p style={{fontSize:13, color:'#555', minHeight:40}}>{sanitize(p.description)?.slice(0,60) || 'No description'}... <span style={{color:'#0AA', fontWeight:'bold'}}>View Details 👁️</span></p>
+              <p style={{fontSize:18, color:'black'}}><b>${Number(p.price) || 0}</b></p>
+            </Link>
             <button onClick={()=>addToCart(p)} style={{width:'100%', padding:12, background:'black', color:'white', borderRadius:8, cursor:'pointer', fontSize:15, fontWeight:'bold'}}>Add to Cart</button>
           </div>
         ))}
       </div>
     </div>
   );
+}
+
+// ===== NEW - PRODUCT DETAILS PAGE - CLICKABLE =====
+function ProductDetails(){
+  const { id } = useParams();
+  const [product,setProduct]=useState(null);
+  const [related,setRelated]=useState([]);
+  const { addToCart } = useContext(CartContext);
+  const nav = useNavigate();
+
+  useEffect(()=>{
+    const fetchOne = async () => {
+      try {
+        // Try single product endpoint, fallback to searching from list
+        let res = await fetch(`${API}/api/products/${id}`);
+        if(res.ok){
+          let data = await res.json();
+          if(data._id) { setProduct(data); }
+          else {
+            // fallback: get all and find
+            let res2 = await fetch(`${API}/api/products`);
+            let all = await res2.json();
+            let found = all.find(p=>p._id===id);
+            if(found) setProduct(found);
+          }
+        } else {
+          let res2 = await fetch(`${API}/api/products`);
+          let all = await res2.json();
+          let found = all.find(p=>p._id===id);
+          if(found) setProduct(found);
+        }
+        // related products
+        let res3 = await fetch(`${API}/api/products`);
+        let allProducts = await res3.json();
+        setRelated(allProducts.filter(p=>p._id!==id).slice(0,4));
+      } catch {}
+    };
+    fetchOne();
+  },[id]);
+
+  if(!product) return <div style={{padding:40, textAlign:'center'}}>Loading product details...</div>;
+
+  return (
+    <div style={{padding:20, maxWidth:1100, margin:'0 auto'}}>
+      <button onClick={()=>nav(-1)} style={{padding:'8px 16px', borderRadius:8, border:'1px solid #ddd', background:'white', cursor:'pointer', marginBottom:20}}>← Back</button>
+      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:30, background:'white', padding:30, borderRadius:20, boxShadow:'0 10px 30px rgba(0,0,0,0.08)'}}>
+        <div>
+          <img src={product.image?.startsWith('/uploads') ? `${API}${product.image}` : product.image} style={{width:'100%', height:450, objectFit:'contain', borderRadius:14, background:'#f9f9f9'}} alt={product.name}/>
+        </div>
+        <div style={{display:'flex', flexDirection:'column', gap:14}}>
+          <span style={{background:'#eef6ff', color:'#0AA', padding:'6px 12px', borderRadius:20, width:'fit-content', fontWeight:'bold', fontSize:13}}>{sanitize(product.category)} • IN STOCK ✅</span>
+          <h1 style={{fontSize:32, margin:0}}>{sanitize(product.name)}</h1>
+          <p style={{fontSize:28, fontWeight:'bold', margin:0}}>${Number(product.price) || 0}</p>
+          <div style={{background:'#f5f7fb', padding:16, borderRadius:12}}>
+            <h3 style={{margin:'0 0 8px 0'}}>Description</h3>
+            <p style={{color:'#444', lineHeight:1.6, margin:0}}>{sanitize(product.description) || 'No description available for this product. High quality product from EsosaTech.'}</p>
+          </div>
+          <div style={{display:'flex', gap:12, marginTop:10}}>
+            <button onClick={()=>{ addToCart(product); nav('/cart'); }} style={{flex:2, padding:16, background:'black', color:'white', borderRadius:12, fontSize:16, fontWeight:'bold', border:'none', cursor:'pointer'}}>🛒 Add to Cart & Checkout</button>
+            <button onClick={()=>addToCart(product)} style={{flex:1, padding:16, background:'white', color:'black', border:'2px solid black', borderRadius:12, fontSize:16, fontWeight:'bold', cursor:'pointer'}}>Add to Cart</button>
+          </div>
+          <div style={{marginTop:10, fontSize:13, color:'#666'}}>
+            <p>✅ Free delivery in Hamburg</p>
+            <p>✅ Pay with Paystack - Secure</p>
+            <p>✅ 7 Days Return Policy</p>
+          </div>
+        </div>
+      </div>
+
+      {related.length>0 && (
+        <div style={{marginTop:40}}>
+          <h2>You may also like</h2>
+          <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))', gap:14}}>
+            {related.map(r=>(
+              <Link key={r._id} to={`/product/${r._id}`} style={{textDecoration:'none', color:'inherit', border:'1px solid #ddd', padding:12, borderRadius:12, background:'white'}}>
+                <img src={r.image?.startsWith('/uploads') ? `${API}${r.image}` : r.image} style={{width:'100%', height:120, objectFit:'cover', borderRadius:8}} alt=""/>
+                <p style={{fontWeight:'bold', margin:'8px 0 0 0', fontSize:14}}>{sanitize(r.name)}</p>
+                <p style={{margin:0, fontSize:13}}>${r.price}</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 function Login(){
@@ -121,7 +211,6 @@ function Login(){
   );
 }
 
-// === FIXED - REGISTER BUTTON ALWAYS VISIBLE ===
 function Register(){
   const [form,setForm]=useState({firstName:'',lastName:'',gender:'Male',country:'Nigeria',phone:'',email:'',password:''});
   const [error,setError]=useState(''); const [loading,setLoading]=useState(false); const nav=useNavigate();
@@ -172,7 +261,6 @@ function Register(){
           </div>
         )}
         {error && <p style={{color:'red', fontSize:13, textAlign:'center', background:'#ffe0e0', padding:8, borderRadius:6}}>{error}</p>}
-        {/* REGISTER BUTTON - ALWAYS BLACK AND VISIBLE */}
         <button type="submit" disabled={loading} style={{background:'black', color:'white', padding:16, borderRadius:12, fontWeight:'bold', fontSize:17, border:'none', cursor:'pointer'}}>
           {loading ? 'Creating Account...' : 'Register → Create Account'}
         </button>
@@ -363,6 +451,7 @@ export default function App(){
         </nav>
         <Routes>
           <Route path="/" element={<Store/>}/>
+          <Route path="/product/:id" element={<ProductDetails/>}/>
           <Route path="/login" element={<Login/>}/>
           <Route path="/register" element={<Register/>}/>
           <Route path="/cart" element={<ProtectedRoute><Cart/></ProtectedRoute>}/>
