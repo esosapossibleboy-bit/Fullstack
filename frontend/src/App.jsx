@@ -3,11 +3,8 @@ import { BrowserRouter, Routes, Route, Link, Navigate, useNavigate } from 'react
 import './App.css';
 
 const API = 'https://esosa-fullstack.onrender.com';
+const PAYSTACK_PUBLIC_KEY = 'pk_test_edc0318e6275da717dc8725207d8b986a9ba7856';
 
-// === PAYSTACK PUBLIC KEY - REPLACE WITH YOURS ===
-const PAYSTACK_PUBLIC_KEY = 'pk_test_xxxxxxxxxx'; // get from paystack dashboard
-
-// === CONTEXTS ===
 const AuthContext = createContext();
 const CartContext = createContext();
 
@@ -28,37 +25,27 @@ function checkPasswordStrength(pwd){
   };
 }
 
-// === STORE WITH SEARCH + CATEGORY + DELETE ===
+// === STORE - NO DELETE BUTTON ===
 function Store(){
   const [products,setProducts] = useState([]);
   const [search,setSearch] = useState('');
   const [category,setCategory] = useState('All');
   const { addToCart } = useContext(CartContext);
-  const { user } = useContext(AuthContext);
-  const isAdmin = user?.isAdmin;
 
   const fetchProducts = async () => {
     const q = `?search=${search}&category=${category}`;
     const res = await fetch(`${API}/api/products${q}`);
     const data = await res.json();
-    // remove duplicates
     const unique = [...new Map(data.map(p => [p.name, p])).values()];
     setProducts(unique);
   };
 
   useEffect(()=>{ fetchProducts(); },[search, category]);
 
-  const deleteProduct = async (id) => {
-    if(!confirm('Delete this product?')) return;
-    await fetch(`${API}/api/products/${id}`, { method:'DELETE', headers:{'x-auth-token':localStorage.getItem('token')}});
-    fetchProducts();
-  };
-
   const categories = ['All','phones','laptops','shirts','watches','headphones','gaming','accessories'];
 
   return (
     <div style={{padding:20}}>
-      {/* SEARCH BAR */}
       <div style={{display:'flex', gap:10, marginBottom:20, flexWrap:'wrap'}}>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Search products..." style={{padding:10, width:300, borderRadius:8, border:'1px solid #ccc'}}/>
         <select value={category} onChange={e=>setCategory(e.target.value)} style={{padding:10, borderRadius:8}}>
@@ -75,7 +62,6 @@ function Store(){
             <p style={{fontSize:13, color:'#555', minHeight:40}}>{p.description || 'No description'}</p>
             <p><b>${p.price}</b></p>
             <button onClick={()=>addToCart(p)} style={{width:'100%', padding:8, background:'black', color:'white', borderRadius:6}}>Add to Cart</button>
-            {isAdmin && <button onClick={()=>deleteProduct(p._id)} style={{width:'100%', marginTop:6, padding:6, background:'red', color:'white', borderRadius:6}}>🗑 Delete</button>}
           </div>
         ))}
       </div>
@@ -95,7 +81,7 @@ function Login(){
     else alert(data.msg);
   };
   const googleLogin = async () => {
-    const googleEmail = prompt('Enter Google Email (For demo, paste your gmail):');
+    const googleEmail = prompt('Enter Google Email:');
     if(!googleEmail) return;
     const res = await fetch(`${API}/api/auth/google`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:googleEmail, firstName:'Google', lastName:'User'})});
     const data = await res.json();
@@ -121,7 +107,7 @@ function Register(){
 
   const submit=async(e)=>{
     e.preventDefault();
-    if(!isStrong){ setError('Weak password - check requirements'); return; }
+    if(!isStrong){ setError('Weak password'); return; }
     const res=await fetch(`${API}/api/auth/register`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(form)});
     const data=await res.json();
     if(data.token){ alert('Registered! ✅'); nav('/login'); } else { setError(data.msg); }
@@ -164,21 +150,20 @@ function Register(){
 
 function Cart(){
   const { cart, remove } = useContext(CartContext); const { user } = useContext(AuthContext); const nav=useNavigate();
-  const total = cart.reduce((s,i)=>s+i.price,0);
+  const total = cart.reduce((s,i)=>s+ (Number(i.price) || 0),0);
 
   const payWithPaystack = () => {
-    if(!window.PaystackPop){ alert('Paystack script not loaded - adding...'); const s=document.createElement('script'); s.src='https://js.paystack.co/v1/inline.js'; document.body.appendChild(s); setTimeout(()=>payWithPaystack(),1500); return; }
+    if(!window.PaystackPop){ const s=document.createElement('script'); s.src='https://js.paystack.co/v1/inline.js'; document.body.appendChild(s); setTimeout(()=>payWithPaystack(),1500); return; }
     const handler = window.PaystackPop.setup({
       key: PAYSTACK_PUBLIC_KEY,
       email: user.email,
-      amount: total*100, // kobo
+      amount: total*100,
       currency: 'NGN',
       ref: 'ESOSA_'+Date.now(),
       callback: async function(response){
-        // Verify on backend
         const res = await fetch(`${API}/api/pay/verify`,{method:'POST',headers:{'Content-Type':'application/json','x-auth-token':localStorage.getItem('token')},body:JSON.stringify({reference: response.reference, items: cart, total, email: user.email})});
-        const data = await res.json();
-        alert('Payment Success! Order Placed ✅ Ref: '+response.reference);
+        await res.json();
+        alert('Payment Success! ✅ Ref: '+response.reference);
         nav('/myorders');
       },
       onClose: function(){ alert('Payment cancelled'); }
@@ -198,15 +183,15 @@ function Cart(){
 function MyOrders(){
   const [orders,setOrders]=useState([]);
   useEffect(()=>{ fetch(`${API}/api/orders/my`,{headers:{'x-auth-token':localStorage.getItem('token')}}).then(r=>r.json()).then(setOrders) },[]);
-  return <div style={{padding:20}}><h2>My Orders</h2>{orders.map(o=><div className="order" key={o._id} style={{border:'1px solid #ddd', padding:10, marginBottom:8, borderRadius:8}}>{o.total}$ - {o.status} - {o.items.length} items - Ref: {o.paystackRef}</div>)}</div>
+  return <div style={{padding:20}}><h2>My Orders</h2>{orders.map(o=><div className="order" key={o._id} style={{border:'1px solid #ddd', padding:10, marginBottom:8, borderRadius:8}}>{Number(o.total)||0}$ - {o.status} - {o.items?.length || 0} items - Ref: {o.paystackRef}</div>)}</div>
 }
 
 function Admin(){
-  const [orders,setOrders]=useState([]); const [name,setName]=useState(''); const [price,setPrice]=useState(''); const [image,setImage]=useState(''); const [category,setCategory]=useState('phones'); const [desc,setDesc]=useState(''); const [file,setFile]=useState(null); const [uploading,setUploading]=useState(false);
+  const [orders,setOrders]=useState([]); const [name,setName]=useState(''); const [price,setPrice]=useState(''); const [image,setImage]=useState(''); const [category,setCategory]=useState('phones'); const [desc,setDesc]=useState(''); const [uploading,setUploading]=useState(false);
   useEffect(()=>{ fetch(`${API}/api/orders/all`,{headers:{'x-auth-token':localStorage.getItem('token')}}).then(r=>r.json()).then(d=>Array.isArray(d)?setOrders(d):setOrders([])) },[]);
 
   const handleFileUpload = async (e) => {
-    const f = e.target.files[0]; if(!f) return; setFile(f); setUploading(true);
+    const f = e.target.files[0]; if(!f) return; setUploading(true);
     const fd = new FormData(); fd.append('image', f);
     try{
       const res = await fetch(`${API}/api/upload`,{method:'POST',headers:{'x-auth-token':localStorage.getItem('token')},body:fd});
@@ -218,10 +203,10 @@ function Admin(){
   const addProduct=async(e)=>{
     e.preventDefault(); if(!image) return alert('Upload image first');
     const res = await fetch(`${API}/api/products`,{method:'POST',headers:{'Content-Type':'application/json','x-auth-token':localStorage.getItem('token')},body:JSON.stringify({name, price:Number(price), image, category, description:desc})});
-    const data = await res.json(); if(data._id){ alert('Product Added ✅'); setName('');setPrice('');setImage('');setDesc('');setFile(null); } else alert(data.msg);
+    const data = await res.json(); if(data._id){ alert('Product Added ✅'); setName('');setPrice('');setImage('');setDesc(''); } else alert(data.msg);
   };
 
-  const totalSales = orders.reduce((s,o)=>s+o.total,0);
+  const totalSales = orders.reduce((s,o)=>s+ (Number(o.total) || 0),0);
   return (
     <div style={{padding:20}}>
       <h2>Admin - Orders ({orders.length}) - Sales ${totalSales}</h2>
