@@ -70,7 +70,6 @@ function Store(){
   );
 }
 
-// ===== NEW BIG LOGIN =====
 function Login(){
   const [email,setEmail]=useState(''); const [pass,setPass]=useState('');
   const [loading,setLoading]=useState(false); const [attempts,setAttempts]=useState(0);
@@ -122,16 +121,17 @@ function Login(){
   );
 }
 
+// === FIXED - REGISTER BUTTON ALWAYS VISIBLE ===
 function Register(){
   const [form,setForm]=useState({firstName:'',lastName:'',gender:'Male',country:'Nigeria',phone:'',email:'',password:''});
   const [error,setError]=useState(''); const [loading,setLoading]=useState(false); const nav=useNavigate();
   const { setUser } = useContext(AuthContext);
   const strength = checkPasswordStrength(form.password);
-  const isStrong = Object.values(strength).every(v=>v===true);
+  const isStrong = form.password ? Object.values(strength).every(v=>v===true) : false;
   const handle = (k,v) => setForm({...form,[k]:v.slice(0,100)});
   const submit=async(e)=>{
     e.preventDefault();
-    if(!isStrong){ setError('Weak password'); return; }
+    if(form.password && !isStrong){ setError('Password must be 8+ chars, Uppercase, lowercase, number, special !@#$%'); return; }
     setLoading(true);
     try {
       const res=await fetch(`${API}/api/auth/register`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...form, email:form.email.toLowerCase().trim()})});
@@ -161,7 +161,7 @@ function Register(){
         </div>
         <input value={form.phone} onChange={e=>handle('phone',e.target.value)} placeholder="Phone" required style={{padding:14, borderRadius:10, border:'1px solid #ddd', fontSize:15}}/>
         <input value={form.email} onChange={e=>handle('email',e.target.value)} placeholder="Email" required type="email" style={{padding:14, borderRadius:10, border:'1px solid #ddd', fontSize:15}}/>
-        <input type="password" value={form.password} onChange={e=>handle('password',e.target.value)} placeholder="Password" required style={{padding:14, borderRadius:10, border:'1px solid #ddd', fontSize:15}}/>
+        <input type="password" value={form.password} onChange={e=>handle('password',e.target.value)} placeholder="Password - e.g. Esosa@123" required style={{padding:14, borderRadius:10, border:'1px solid #ddd', fontSize:15}}/>
         {form.password && (
           <div style={{fontSize:'13px', background:'#f9f9f9', padding:10, borderRadius:8}}>
             <div style={{color: strength.length ? 'green' : 'red'}}>{strength.length ? '✅' : '❌'} 8+ chars</div>
@@ -171,12 +171,16 @@ function Register(){
             <div style={{color: strength.special ? 'green' : 'red'}}>{strength.special ? '✅' : '❌'} Special !@#$%</div>
           </div>
         )}
-        {error && <p style={{color:'red', fontSize:13, textAlign:'center'}}>{error}</p>}
-        <button disabled={!isStrong || loading} style={{opacity: isStrong ? 1 : 0.5, background: isStrong ? 'black' : '#888', color:'white', padding:16, borderRadius:12, fontWeight:'bold', fontSize:16, border:'none', cursor:'pointer'}}>{loading?'Creating...': isStrong ? 'Register ✅' : 'Weak Password ❌'}</button>
+        {error && <p style={{color:'red', fontSize:13, textAlign:'center', background:'#ffe0e0', padding:8, borderRadius:6}}>{error}</p>}
+        {/* REGISTER BUTTON - ALWAYS BLACK AND VISIBLE */}
+        <button type="submit" disabled={loading} style={{background:'black', color:'white', padding:16, borderRadius:12, fontWeight:'bold', fontSize:17, border:'none', cursor:'pointer'}}>
+          {loading ? 'Creating Account...' : 'Register → Create Account'}
+        </button>
         <div style={{display:'flex', alignItems:'center', gap:10}}><div style={{flex:1, height:1, background:'#ddd'}}></div><span style={{color:'#888', fontSize:13}}>OR</span><div style={{flex:1, height:1, background:'#ddd'}}></div></div>
         <button type="button" onClick={googleLogin} style={{width:'100%', background:'white', color:'#444', border:'1px solid #ddd', padding:14, borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center', gap:12, fontWeight:600, cursor:'pointer', fontSize:15}}>
           <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="google" style={{width:22, height:22}} /> Continue with Google
         </button>
+        <p style={{textAlign:'center', fontSize:14}}>Already have account? <Link to="/login" style={{color:'#0AA', fontWeight:'bold'}}>Login</Link></p>
       </form>
     </div>
   )
