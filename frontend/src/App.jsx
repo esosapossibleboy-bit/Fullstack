@@ -148,7 +148,7 @@ function ProductDetails(){
         <div>
           <img src={resolveImg(currentImg)} style={{width:'100%', height:420, objectFit:'contain', borderRadius:14, background:'#f9f9f9', border:'1px solid #eee'}} alt={product.name}/>
           {allImages.length>1 && (
-            <div style={{display:'flex', gap:10, marginTop:14, overflowX:'auto', paddingBottom:6}}>
+            <div style={{display:'flex', gap:10, marginTop:14, overflowX:'auto', paddingBottom:6, flexWrap:'wrap'}}>
               {allImages.map((img,i)=>(
                 <img key={i} onClick={()=>setActiveImg(i)} src={resolveImg(img)} style={{width:72, height:72, objectFit:'cover', borderRadius:10, border: activeImg===i ? '3px solid black' : '2px solid #ddd', cursor:'pointer', flexShrink:0}} alt={`thumb ${i}`}/>
               ))}
@@ -191,20 +191,6 @@ function ProductDetails(){
           <button onClick={()=>{ if(!reviewText) return; setReviews([{user:'You', rating:5, text:reviewText}, ...reviews]); setReviewText(''); alert('Review added ✅'); }} style={{padding:'12px 18px', background:'black', color:'white', borderRadius:8, border:'none', cursor:'pointer'}}>Post</button>
         </div>
       </div>
-      {related.length>0 && (
-        <div style={{marginTop:30}}>
-          <h2>You may also like</h2>
-          <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))', gap:12}}>
-            {related.map(r=>(
-              <Link key={r._id} to={`/product/${r._id}`} style={{textDecoration:'none', color:'inherit', border:'1px solid #ddd', padding:10, borderRadius:12, background:'white'}}>
-                <img src={resolveImg(getFirstImage(r))} style={{width:'100%', height:100, objectFit:'cover', borderRadius:8}} alt=""/>
-                <p style={{fontWeight:'bold', margin:'6px 0 0 0', fontSize:13}}>{sanitize(r.name)}</p>
-                <p style={{margin:0, fontSize:12}}>${r.price}</p>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
@@ -229,7 +215,6 @@ function Wishlist(){
   )
 }
 
-// === LOGIN WITH GOOGLE LOGO ===
 function Login(){
   const [email,setEmail]=useState(''); const [pass,setPass]=useState('');
   const [loading,setLoading]=useState(false); const [attempts,setAttempts]=useState(0);
@@ -273,7 +258,6 @@ function Login(){
   );
 }
 
-// === REGISTER WITH GOOGLE LOGO ===
 function Register(){
   const [form,setForm]=useState({firstName:'',lastName:'',gender:'Male',country:'Nigeria',phone:'',email:'',password:''});
   const [error,setError]=useState(''); const [loading,setLoading]=useState(false); const nav=useNavigate();
@@ -420,14 +404,16 @@ function Admin(){
   const [orders,setOrders]=useState([]); 
   const [products,setProducts]=useState([]);
   const [name,setName]=useState(''); const [price,setPrice]=useState(''); const [images,setImages]=useState([]); const [category,setCategory]=useState('phones'); const [desc,setDesc]=useState(''); const [uploading,setUploading]=useState(false);
+  const [urlInput,setUrlInput]=useState('');
   const fetchAll = ()=>{
     fetch(`${API}/api/orders/all`,{headers:{'x-auth-token':localStorage.getItem('token')}}).then(r=>r.json()).then(d=>Array.isArray(d)?setOrders(d):setOrders([])).catch(()=>setOrders([]));
     fetch(`${API}/api/products`).then(r=>r.json()).then(d=>Array.isArray(d)?setProducts(d):setProducts([])).catch(()=>setProducts([]));
   };
   useEffect(()=>{ fetchAll(); },[]);
+
   const handleFileUpload = async (e) => {
     const files = Array.from(e.target.files); if(!files.length) return;
-    if(files.length + images.length > 5) return alert('Max 5 images total');
+    if(files.length + images.length > 10) return alert(`Max 10 images total - you have ${images.length}, trying to add ${files.length}`);
     for(let f of files){ if(f.size > 2*1024*1024) return alert(`${f.name} too big - Max 2MB`); }
     setUploading(true);
     try{
@@ -447,19 +433,30 @@ function Admin(){
         }
       }
       if(uploaded.length){
-        setImages(prev=>[...prev, ...uploaded].slice(0,5));
-        alert(`${uploaded.length} images uploaded ✅`);
-      } else alert('Upload failed - check server.js');
+        setImages(prev=>[...prev, ...uploaded].slice(0,10));
+        alert(`${uploaded.length} images uploaded ✅ - Total now ${images.length + uploaded.length}`);
+      } else alert('Upload failed - check server.js has /api/upload-multiple');
     }catch{ alert('Upload error'); }
     setUploading(false);
   };
+
+  const handleAddUrls = () => {
+    if(!urlInput.trim()) return alert('Paste image URL first');
+    const urls = urlInput.split(/[\n,\s,]+/).map(u=>u.trim()).filter(u=>u.startsWith('http') && u.length>10);
+    if(urls.length===0) return alert('No valid https URLs found');
+    if(images.length + urls.length > 10) return alert(`Max 10 images - you have ${images.length}, trying to add ${urls.length}`);
+    setImages(prev=>[...prev, ...urls].slice(0,10));
+    setUrlInput('');
+    alert(`${urls.length} URL images added ✅ - Total now ${images.length + urls.length}`);
+  };
+
   const addProduct=async(e)=>{
     e.preventDefault(); 
-    if(images.length===0) return alert('Upload at least 1 image');
+    if(images.length===0) return alert('Add at least 1 image');
     try {
       const res = await fetch(`${API}/api/products`,{method:'POST',headers:{'Content-Type':'application/json','x-auth-token':localStorage.getItem('token')},body:JSON.stringify({name: sanitize(name), price:Number(price), images, image: images[0], category, description: sanitize(desc)})});
       const data = await res.json(); 
-      if(data._id){ alert('Product Added ✅ with '+images.length+' images'); setName('');setPrice('');setImages([]);setDesc(''); fetchAll(); } else alert(data.msg || 'Failed');
+      if(data._id){ alert('Product Added ✅ with '+images.length+' images'); setName('');setPrice('');setImages([]);setDesc(''); setUrlInput(''); fetchAll(); } else alert(data.msg || 'Failed');
     } catch { alert('Add failed'); }
   };
   const deleteProduct = async (id, productName)=>{
@@ -480,40 +477,57 @@ function Admin(){
   return (
     <div style={{padding:20}}>
       <h2 style={{textAlign:'center'}}>Admin - Orders ({orders.length}) - Sales ${totalSales} - Products ({products.length})</h2>
-      <form onSubmit={addProduct} style={{border:'2px solid #222', padding:24, maxWidth:700, margin:'0 auto 30px auto', borderRadius:18, background:'white'}}>
-        <h3 style={{textAlign:'center'}}>Add Product - Multi Image (Max 5)</h3>
+      <form onSubmit={addProduct} style={{border:'2px solid #222', padding:24, maxWidth:750, margin:'0 auto 30px auto', borderRadius:18, background:'white'}}>
+        <h3 style={{textAlign:'center'}}>Add Product - MAX 10 Images (Upload + URL)</h3>
         <div style={{display:'flex', gap:10, marginBottom:10}}><input value={name} onChange={e=>setName(e.target.value)} placeholder="Product Name" required style={{flex:2, padding:12, borderRadius:8, border:'1px solid #ccc'}}/><select value={category} onChange={e=>setCategory(e.target.value)} style={{flex:1, padding:12, borderRadius:8}}><option>phones</option><option>laptops</option><option>shirts</option><option>watches</option><option>headphones</option><option>gaming</option><option>accessories</option></select></div>
         <div style={{display:'flex', gap:10, marginBottom:10}}><input value={desc} onChange={e=>setDesc(e.target.value)} placeholder="Description" required style={{flex:2, padding:12, borderRadius:8, border:'1px solid #ccc'}}/><input value={price} onChange={e=>setPrice(e.target.value)} placeholder="Price $" type="number" required style={{flex:1, padding:12, borderRadius:8, border:'1px solid #ccc'}}/></div>
+        
         <div style={{background:'#eef6ff', padding:14, borderRadius:10, border:'2px dashed #0AA', textAlign:'center', marginBottom:10}}>
-          <label style={{fontWeight:'bold', display:'block', marginBottom:8}}>📁 Upload 1-5 Images - Select multiple at once</label>
+          <label style={{fontWeight:'bold', display:'block', marginBottom:8}}>📁 Upload Images - Select multiple (Max 10 total)</label>
           <input type="file" multiple accept="image/jpeg,image/png,image/webp" onChange={handleFileUpload}/>
           {uploading && <p style={{color:'#0AA', fontWeight:'bold'}}>Uploading... please wait</p>}
+          <p style={{fontSize:11, color:'#666', marginTop:4}}>{images.length}/10 images added</p>
         </div>
+
+        <div style={{textAlign:'center', margin:'8px 0', fontWeight:'bold', color:'#666'}}>— OR ADD FROM ONLINE —</div>
+
+        <div style={{background:'#fff8e6', padding:14, borderRadius:10, border:'2px dashed #ffaa00', marginBottom:12}}>
+          <label style={{fontWeight:'bold', display:'block', marginBottom:8}}>🌐 Paste Online Image URLs - Amazon, AliExpress, Google Images</label>
+          <div style={{display:'flex', gap:6}}>
+            <input value={urlInput} onChange={e=>setUrlInput(e.target.value)} placeholder="Paste https://...jpg  - You can paste 10 URLs separated by comma or new line" style={{flex:1, padding:12, borderRadius:8, border:'1px solid #ccc'}}/>
+            <button type="button" onClick={handleAddUrls} style={{padding:'12px 18px', background:'#ffaa00', color:'black', fontWeight:'bold', borderRadius:8, border:'none', cursor:'pointer', whiteSpace:'nowrap'}}>Add URL(s)</button>
+          </div>
+          <p style={{fontSize:11, color:'#666', margin:'6px 0 0 0'}}>Right-click any online image → Copy Image Address → Paste here. Supports 10 URLs.</p>
+        </div>
+        
         {images.length>0 && (
-          <div style={{display:'flex', gap:8, flexWrap:'wrap', marginBottom:12, background:'#f9f9f9', padding:10, borderRadius:8}}>
+          <div style={{display:'flex', gap:8, flexWrap:'wrap', marginBottom:12, background:'#f9f9f9', padding:10, borderRadius:8, border:'1px solid #ddd'}}>
             {images.map((img,i)=>(
               <div key={i} style={{position:'relative'}}>
-                <img src={img} alt="preview" style={{width:80, height:80, objectFit:'cover', borderRadius:8, border:'2px solid #0AA'}}/>
+                <img src={img} onError={(e)=>e.target.src='https://via.placeholder.com/80?text=Invalid'} alt="preview" style={{width:80, height:80, objectFit:'cover', borderRadius:8, border:'2px solid #0AA'}}/>
                 <button type="button" onClick={()=>setImages(images.filter((_,idx)=>idx!==i))} style={{position:'absolute', top:-6, right:-6, background:'red', color:'white', border:'none', borderRadius:20, width:22, height:22, cursor:'pointer', fontWeight:'bold'}}>x</button>
-                <div style={{fontSize:10, textAlign:'center'}}>{i===0 ? 'MAIN' : `IMG ${i+1}`}</div>
+                <div style={{fontSize:10, textAlign:'center'}}>{i===0 ? 'MAIN' : `IMG ${i+1}`} {img.includes('esosa-fullstack') || img.includes('/uploads') ? '📁' : '🌐'}</div>
               </div>
             ))}
           </div>
         )}
-        <button type="submit" style={{width:'100%', padding:14, background:'black', color:'white', borderRadius:10, fontWeight:'bold', border:'none', cursor:'pointer'}}>➕ Add Product with {images.length} Images</button>
+
+        <button type="submit" style={{width:'100%', padding:14, background: images.length>0 ? 'black' : '#888', color:'white', borderRadius:10, fontWeight:'bold', border:'none', cursor:'pointer'}}>➕ Add Product with {images.length}/10 Images</button>
       </form>
-      <h3>🛒 Products</h3>
+
+      <h3>🛒 Products - {products.length} total</h3>
       <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:12, marginBottom:30}}>
         {products.map(p=>(
           <div key={p._id} style={{border:'1px solid #ddd', padding:10, borderRadius:10, background:'white'}}>
             <img src={resolveImg(getFirstImage(p))} style={{width:'100%', height:120, objectFit:'cover', borderRadius:8}} alt=""/>
-            <p style={{margin:'6px 0 2px 0', fontWeight:'bold', fontSize:13}}>{sanitize(p.name)} {getAllImages(p).length>1 && <span style={{background:'black', color:'white', fontSize:10, padding:'2px 5px', borderRadius:4}}>{getAllImages(p).length} imgs</span>}</p>
-            <p style={{margin:0, fontSize:12}}>${p.price}</p>
+            <p style={{margin:'6px 0 2px 0', fontWeight:'bold', fontSize:13}}>{sanitize(p.name)} <span style={{background:'black', color:'white', fontSize:10, padding:'2px 5px', borderRadius:4}}>{getAllImages(p).length} imgs</span></p>
+            <p style={{margin:0, fontSize:12}}>${p.price} - {p.category}</p>
             <button onClick={()=>deleteProduct(p._id, p.name)} style={{width:'100%', marginTop:6, background:'#FF4444', color:'white', padding:6, borderRadius:6, border:'none', cursor:'pointer'}}>🗑️ Delete</button>
           </div>
         ))}
       </div>
-      <h3>📦 Orders</h3>
+
+      <h3>📦 Orders - Update Status</h3>
       <div style={{display:'grid', gap:8}}>
         {orders.map(o=>(
           <div key={o._id} style={{border:'1px solid #ddd', padding:12, borderRadius:8, background:'white'}}>

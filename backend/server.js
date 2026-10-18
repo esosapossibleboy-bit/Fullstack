@@ -17,14 +17,15 @@ const app = express();
 app.use(helmet());
 app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
 
-// === 2. CORS WHITELIST - UPDATED WITH YOUR NEW DOMAIN FROM SCREENSHOT ===
+// === 2. CORS WHITELIST - UPDATED WITH YOUR LATEST FROM SCREENSHOT ===
 const allowedOrigins = [
   'https://esosa-shop.vercel.app',
   'https://fullstack-orpin-three.vercel.app',
   'https://fullstack-lake-seven.vercel.app',
   'https://fullstack2-i49ox4fax-esosatech.vercel.app',
   'https://fullstack2-738c5aa6r-esosatech.vercel.app',
-  'https://fullstack2-11791nbyd-esosatech.vercel.app', // YOUR NEW ONE FROM SCREENSHOT
+  'https://fullstack2-11791nbyd-esosatech.vercel.app',
+  'https://290gg6x-esosatech.vercel.app', // YOUR CURRENT FROM SCREENSHOT
   'http://localhost:5173',
   'http://localhost:3000'
 ];
@@ -74,7 +75,7 @@ const fileFilter = (req,file,cb) => {
 };
 const upload = multer({ storage, fileFilter, limits: { fileSize: 2*1024*1024 }});
 
-mongoose.connect(process.env.MONGO_URI).then(()=>console.log('MongoDB Secure Connected - Multi Image Gallery Live'));
+mongoose.connect(process.env.MONGO_URI).then(()=>console.log('MongoDB Secure Connected - MAX 10 Images + Online URL Live ✅'));
 
 // === 5. RATE LIMIT ===
 const authLimiter = rateLimit({ windowMs: 15*60*1000, max: 20, message: {msg:'Too many attempts'} });
@@ -90,14 +91,14 @@ const User = mongoose.model('User', new mongoose.Schema({
   isAdmin: { type: Boolean, default: false }
 }));
 
-// === UPDATED PRODUCT WITH MULTIPLE IMAGES + RATING + REVIEWS ===
+// === UPDATED PRODUCT WITH MULTIPLE IMAGES (MAX 10) + RATING + REVIEWS ===
 const Product = mongoose.model('Product', new mongoose.Schema({
   name: {type:String, required:true, trim:true, maxlength:100},
   category: {type:String, enum:['phones','laptops','shirts','watches','headphones','gaming','accessories']},
   description: {type:String, maxlength:500},
   price: {type:Number, min:0, max:100000},
-  image: String, // old single - keep for backwards compat
-  images: {type:[String], default: []}, // NEW - multiple images array
+  image: String,
+  images: {type:[String], default: []}, // NOW SUPPORTS 10 + ONLINE URLS
   rating: {type:Number, default:4.5},
   reviews: [{user:String, rating:Number, text:String, createdAt:{type:Date, default:Date.now}}]
 }));
@@ -174,7 +175,6 @@ app.post('/api/auth/google', authLimiter, async (req,res)=>{
   }catch{ res.status(500).json({msg:'Google login failed'}) }
 });
 
-// OLD SINGLE UPLOAD - KEEP FOR BACKWARDS
 app.post('/api/upload', auth, upload.single('image'), (req,res)=>{
   if(req.user.isAdmin!==true) {
     if(req.file) fs.unlinkSync(req.file.path);
@@ -184,8 +184,8 @@ app.post('/api/upload', auth, upload.single('image'), (req,res)=>{
   res.json({path:`/uploads/${req.file.filename}`});
 });
 
-// === NEW - MULTIPLE IMAGES UPLOAD (MAX 5) ===
-app.post('/api/upload-multiple', auth, upload.array('images', 5), (req,res)=>{
+// === UPDATED - MAX 10 IMAGES ===
+app.post('/api/upload-multiple', auth, upload.array('images', 10), (req,res)=>{
   if(req.user.isAdmin!==true) {
     if(req.files) req.files.forEach(f=>fs.unlinkSync(f.path));
     return res.status(403).json({msg:'Admin only'});
@@ -226,7 +226,7 @@ app.post('/api/products/:id/review', auth, async (req,res)=>{
   }catch{ res.status(500).json({msg:'Review failed'}) }
 });
 
-// UPDATED - NOW ACCEPTS images ARRAY
+// UPDATED - NOW MAX 10 + SUPPORTS ONLINE URLs (https://...)
 app.post('/api/products', auth, async (req,res)=>{
   try{
     if(!req.user.isAdmin) return res.status(403).json({msg:'Admin only'});
@@ -234,18 +234,18 @@ app.post('/api/products', auth, async (req,res)=>{
     if(!name || !price) return res.status(400).json({msg:'Name and price required'});
     if(String(description).length > 500) return res.status(400).json({msg:'Description too long'});
     
-    // NEW LOGIC: support multiple
     let finalImages = [];
     if(Array.isArray(images) && images.length) finalImages = images;
     else if(image) finalImages = [image];
     
     if(finalImages.length===0) return res.status(400).json({msg:'At least 1 image required'});
-    if(finalImages.length>5) return res.status(400).json({msg:'Max 5 images'});
+    if(finalImages.length>10) return res.status(400).json({msg:'Max 10 images allowed'});
     
+    // Allow both /uploads/... and https://... (online URLs)
     const finalImage = finalImages[0];
     const product = await Product.create({name, category, description, price:Number(price), image:finalImage, images:finalImages, rating:4.5, reviews:[]});
     res.json(product);
-  }catch{ res.status(500).json({msg:'Failed'}) }
+  }catch(err){ console.error(err); res.status(500).json({msg:'Failed'}) }
 });
 
 app.delete('/api/products/:id', auth, async (req,res)=>{
@@ -320,7 +320,7 @@ app.patch('/api/orders/:id/status', auth, async (req,res)=>{
   }catch{ res.status(500).json({msg:'Status update failed'}) }
 });
 
-app.get('/', (req,res)=> res.send('Esosa API Live - Multi Image Gallery Ready ✅'));
+app.get('/', (req,res)=> res.send('Esosa API Live - MAX 10 Images + Online URL Ready ✅'));
 
 app.use((err, req, res, next)=>{
   if(err.type === 'entity.too.large' || err.status === 413 || err.message.includes('too large')){
@@ -337,4 +337,4 @@ app.use((err, req, res, next)=>{
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, ()=> console.log(`🔒 SECURE Server Live on ${PORT} - Multi Image Gallery Ready ✅`));
+app.listen(PORT, ()=> console.log(`🔒 SECURE Server Live on ${PORT} - MAX 10 Images + Online URL Ready ✅`));
