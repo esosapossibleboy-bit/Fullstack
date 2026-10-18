@@ -59,7 +59,6 @@ function Store(){
           <div key={p._id} style={{border:'1px solid #ddd', padding:14, borderRadius:14, background:'white', boxShadow:'0 2px 8px rgba(0,0,0,0.06)', cursor:'pointer', transition:'transform 0.2s'}} 
                onMouseEnter={e=>e.currentTarget.style.transform='scale(1.02)'} 
                onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'}>
-            {/* CLICKABLE - GOES TO DETAILS */}
             <Link to={`/product/${p._id}`} style={{textDecoration:'none', color:'inherit'}}>
               <img src={p.image?.startsWith('/uploads') ? `${API}${p.image}` : (p.image?.startsWith('https://') ? p.image : '')} onError={(e)=> e.target.style.display='none'} style={{width:'100%', height:180, objectFit:'cover', borderRadius:10}} alt={sanitize(p.name)} />
               <span style={{fontSize:11, background:'#eee', padding:'3px 8px', borderRadius:6}}>{sanitize(p.category)}</span>
@@ -75,24 +74,20 @@ function Store(){
   );
 }
 
-// ===== NEW - PRODUCT DETAILS PAGE - CLICKABLE =====
 function ProductDetails(){
   const { id } = useParams();
   const [product,setProduct]=useState(null);
   const [related,setRelated]=useState([]);
   const { addToCart } = useContext(CartContext);
   const nav = useNavigate();
-
   useEffect(()=>{
     const fetchOne = async () => {
       try {
-        // Try single product endpoint, fallback to searching from list
         let res = await fetch(`${API}/api/products/${id}`);
         if(res.ok){
           let data = await res.json();
           if(data._id) { setProduct(data); }
           else {
-            // fallback: get all and find
             let res2 = await fetch(`${API}/api/products`);
             let all = await res2.json();
             let found = all.find(p=>p._id===id);
@@ -104,7 +99,6 @@ function ProductDetails(){
           let found = all.find(p=>p._id===id);
           if(found) setProduct(found);
         }
-        // related products
         let res3 = await fetch(`${API}/api/products`);
         let allProducts = await res3.json();
         setRelated(allProducts.filter(p=>p._id!==id).slice(0,4));
@@ -112,9 +106,7 @@ function ProductDetails(){
     };
     fetchOne();
   },[id]);
-
   if(!product) return <div style={{padding:40, textAlign:'center'}}>Loading product details...</div>;
-
   return (
     <div style={{padding:20, maxWidth:1100, margin:'0 auto'}}>
       <button onClick={()=>nav(-1)} style={{padding:'8px 16px', borderRadius:8, border:'1px solid #ddd', background:'white', cursor:'pointer', marginBottom:20}}>← Back</button>
@@ -141,7 +133,6 @@ function ProductDetails(){
           </div>
         </div>
       </div>
-
       {related.length>0 && (
         <div style={{marginTop:40}}>
           <h2>You may also like</h2>
@@ -250,7 +241,8 @@ function Register(){
         </div>
         <input value={form.phone} onChange={e=>handle('phone',e.target.value)} placeholder="Phone" required style={{padding:14, borderRadius:10, border:'1px solid #ddd', fontSize:15}}/>
         <input value={form.email} onChange={e=>handle('email',e.target.value)} placeholder="Email" required type="email" style={{padding:14, borderRadius:10, border:'1px solid #ddd', fontSize:15}}/>
-        <input type="password" value={form.password} onChange={e=>handle('password',e.target.value)} placeholder="Password - e.g. Esosa@123" required style={{padding:14, borderRadius:10, border:'1px solid #ddd', fontSize:15}}/>
+        {/* FIXED: Placeholder is just Password now */}
+        <input type="password" value={form.password} onChange={e=>handle('password',e.target.value)} placeholder="Password" required style={{padding:14, borderRadius:10, border:'1px solid #ddd', fontSize:15}}/>
         {form.password && (
           <div style={{fontSize:'13px', background:'#f9f9f9', padding:10, borderRadius:8}}>
             <div style={{color: strength.length ? 'green' : 'red'}}>{strength.length ? '✅' : '❌'} 8+ chars</div>
@@ -261,8 +253,9 @@ function Register(){
           </div>
         )}
         {error && <p style={{color:'red', fontSize:13, textAlign:'center', background:'#ffe0e0', padding:8, borderRadius:6}}>{error}</p>}
+        {/* FIXED: Button says Create Account only */}
         <button type="submit" disabled={loading} style={{background:'black', color:'white', padding:16, borderRadius:12, fontWeight:'bold', fontSize:17, border:'none', cursor:'pointer'}}>
-          {loading ? 'Creating Account...' : 'Register → Create Account'}
+          {loading ? 'Creating Account...' : 'Create Account'}
         </button>
         <div style={{display:'flex', alignItems:'center', gap:10}}><div style={{flex:1, height:1, background:'#ddd'}}></div><span style={{color:'#888', fontSize:13}}>OR</span><div style={{flex:1, height:1, background:'#ddd'}}></div></div>
         <button type="button" onClick={googleLogin} style={{width:'100%', background:'white', color:'#444', border:'1px solid #ddd', padding:14, borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center', gap:12, fontWeight:600, cursor:'pointer', fontSize:15}}>
