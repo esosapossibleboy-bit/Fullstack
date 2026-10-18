@@ -30,7 +30,22 @@ const sanitize = (str) => {
   return String(str).replace(/[<>\"']/g, '').trim().slice(0, 100);
 };
 
-// ===== 1. STORE WITH WISHLIST + RATING =====
+const getFirstImage = (p) => {
+  if(p?.images && p.images.length) return p.images[0];
+  return p?.image || '';
+};
+const getAllImages = (p) => {
+  if(p?.images && p.images.length) return p.images;
+  if(p?.image) return [p.image];
+  return [];
+};
+const resolveImg = (img) => {
+  if(!img) return '';
+  if(img.startsWith('http')) return img;
+  if(img.startsWith('/uploads')) return `${API}${img}`;
+  return img;
+};
+
 function Store(){
   const [products,setProducts] = useState([]);
   const [search,setSearch] = useState('');
@@ -61,36 +76,40 @@ function Store(){
         <Link to="/wishlist" style={{padding:'12px 18px', background:'#ffefef', borderRadius:10, textDecoration:'none', color:'black', fontWeight:'bold'}}>❤️ Wishlist ({wishlist.length})</Link>
       </div>
       <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))', gap:18}}>
-        {products.map(p=>(
+        {products.map(p=>{
+          const first = getFirstImage(p);
+          const allCount = getAllImages(p).length;
+          return (
           <div key={p._id} style={{border:'1px solid #ddd', padding:14, borderRadius:14, background:'white', boxShadow:'0 2px 8px rgba(0,0,0,0.06)', position:'relative'}}>
             <button onClick={()=>toggleWishlist(p)} style={{position:'absolute', top:10, right:10, background:'white', border:'1px solid #ddd', borderRadius:20, width:34, height:34, cursor:'pointer', zIndex:2}}>
               {wishlist.find(w=>w._id===p._id) ? '❤️' : '🤍'}
             </button>
+            {allCount>1 && <span style={{position:'absolute', top:10, left:10, background:'black', color:'white', fontSize:10, padding:'3px 6px', borderRadius:6, zIndex:2}}>{allCount} IMAGES</span>}
             <Link to={`/product/${p._id}`} style={{textDecoration:'none', color:'inherit'}}>
-              <img src={p.image?.startsWith('/uploads') ? `${API}${p.image}` : (p.image?.startsWith('https://') ? p.image : '')} onError={(e)=> e.target.style.display='none'} style={{width:'100%', height:180, objectFit:'cover', borderRadius:10}} alt={sanitize(p.name)} />
+              <img src={resolveImg(first)} onError={(e)=> e.target.style.display='none'} style={{width:'100%', height:180, objectFit:'cover', borderRadius:10}} alt={sanitize(p.name)} />
               <span style={{fontSize:11, background:'#eee', padding:'3px 8px', borderRadius:6}}>{sanitize(p.category)}</span>
               <h3 style={{margin:'8px 0', color:'black', fontSize:16}}>{sanitize(p.name)}</h3>
               <div style={{display:'flex', alignItems:'center', gap:6, fontSize:13}}>
                 <span style={{color:'gold'}}>★ {(p.rating||4.5).toFixed(1)}</span>
-                <span style={{color:'#888'}}>({p.reviews?.length || Math.floor(Math.random()*50)+5} reviews)</span>
+                <span style={{color:'#888'}}>({p.reviews?.length || 5} reviews)</span>
               </div>
               <p style={{fontSize:13, color:'#555', minHeight:20, margin:'6px 0'}}>{sanitize(p.description)?.slice(0,50) || 'Quality product'}...</p>
               <p style={{fontSize:18, color:'black', margin:'6px 0'}}><b>${Number(p.price) || 0}</b> <span style={{fontSize:12, color:'green'}}>• In Stock</span></p>
             </Link>
             <button onClick={()=>addToCart(p)} style={{width:'100%', padding:12, background:'black', color:'white', borderRadius:8, cursor:'pointer', fontSize:14, fontWeight:'bold'}}>Add to Cart</button>
           </div>
-        ))}
+        )})}
       </div>
     </div>
   );
 }
 
-// ===== 2. PRODUCT DETAILS WITH RATINGS, QUANTITY =====
 function ProductDetails(){
   const { id } = useParams();
   const [product,setProduct]=useState(null);
   const [related,setRelated]=useState([]);
   const [qty,setQty]=useState(1);
+  const [activeImg,setActiveImg]=useState(0);
   const [reviewText,setReviewText]=useState('');
   const [reviews,setReviews]=useState([]);
   const { addToCart } = useContext(CartContext);
@@ -108,7 +127,7 @@ function ProductDetails(){
           let all = await res2.json();
           data = all.find(p=>p._id===id);
         }
-        if(data){ setProduct(data); setReviews(data.reviews || [{user:'John D.', rating:5, text:'Great product! Fast delivery'}, {user:'Sarah', rating:4, text:'Good quality for price'}]); }
+        if(data){ setProduct(data); setActiveImg(0); setReviews(data.reviews || [{user:'John D.', rating:5, text:'Great product! Fast delivery'}, {user:'Sarah', rating:4, text:'Good quality for price'}]); }
         let res3 = await fetch(`${API}/api/products`);
         let allProducts = await res3.json();
         setRelated(allProducts.filter(p=>p._id!==id).slice(0,4));
@@ -118,13 +137,25 @@ function ProductDetails(){
   },[id]);
 
   if(!product) return <div style={{padding:40, textAlign:'center'}}>Loading product details...</div>;
+  
+  const allImages = getAllImages(product);
+  const currentImg = allImages[activeImg] || allImages[0];
 
   return (
     <div style={{padding:20, maxWidth:1100, margin:'0 auto'}}>
       <button onClick={()=>nav(-1)} style={{padding:'8px 16px', borderRadius:8, border:'1px solid #ddd', background:'white', cursor:'pointer', marginBottom:20}}>← Back to Store</button>
       <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:30, background:'white', padding:24, borderRadius:20, boxShadow:'0 10px 30px rgba(0,0,0,0.08)'}} className="responsive-grid">
         <div>
-          <img src={product.image?.startsWith('/uploads') ? `${API}${product.image}` : product.image} style={{width:'100%', height:420, objectFit:'contain', borderRadius:14, background:'#f9f9f9'}} alt={product.name}/>
+          <img src={resolveImg(currentImg)} style={{width:'100%', height:420, objectFit:'contain', borderRadius:14, background:'#f9f9f9', border:'1px solid #eee'}} alt={product.name}/>
+          {/* THUMBNAILS - SWITCH IMAGE */}
+          {allImages.length>1 && (
+            <div style={{display:'flex', gap:10, marginTop:14, overflowX:'auto', paddingBottom:6}}>
+              {allImages.map((img,i)=>(
+                <img key={i} onClick={()=>setActiveImg(i)} src={resolveImg(img)} style={{width:72, height:72, objectFit:'cover', borderRadius:10, border: activeImg===i ? '3px solid black' : '2px solid #ddd', cursor:'pointer', flexShrink:0}} alt={`thumb ${i}`}/>
+              ))}
+            </div>
+          )}
+          {allImages.length>1 && <p style={{fontSize:12, color:'#888', marginTop:6}}>👆 Click thumbnail to switch - {allImages.length} images</p>}
         </div>
         <div style={{display:'flex', flexDirection:'column', gap:12}}>
           <div style={{display:'flex', justifyContent:'space-between'}}>
@@ -172,7 +203,7 @@ function ProductDetails(){
           <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))', gap:12}}>
             {related.map(r=>(
               <Link key={r._id} to={`/product/${r._id}`} style={{textDecoration:'none', color:'inherit', border:'1px solid #ddd', padding:10, borderRadius:12, background:'white'}}>
-                <img src={r.image?.startsWith('/uploads') ? `${API}${r.image}` : r.image} style={{width:'100%', height:100, objectFit:'cover', borderRadius:8}} alt=""/>
+                <img src={resolveImg(getFirstImage(r))} style={{width:'100%', height:100, objectFit:'cover', borderRadius:8}} alt=""/>
                 <p style={{fontWeight:'bold', margin:'6px 0 0 0', fontSize:13}}>{sanitize(r.name)}</p>
                 <p style={{margin:0, fontSize:12}}>${r.price}</p>
               </Link>
@@ -184,7 +215,6 @@ function ProductDetails(){
   )
 }
 
-// WISHLIST PAGE
 function Wishlist(){
   const { wishlist, toggleWishlist } = useContext(WishlistContext);
   const { addToCart } = useContext(CartContext);
@@ -195,7 +225,7 @@ function Wishlist(){
         <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:14}}>
           {wishlist.map(p=>(
             <div key={p._id} style={{border:'1px solid #ddd', padding:12, borderRadius:12, background:'white'}}>
-              <Link to={`/product/${p._id}`} style={{textDecoration:'none', color:'black'}}><img src={p.image?.startsWith('/uploads') ? `${API}${p.image}` : p.image} style={{width:'100%', height:130, objectFit:'cover', borderRadius:8}} alt=""/><p style={{fontWeight:'bold'}}>{p.name}</p><p>${p.price}</p></Link>
+              <Link to={`/product/${p._id}`} style={{textDecoration:'none', color:'black'}}><img src={resolveImg(getFirstImage(p))} style={{width:'100%', height:130, objectFit:'cover', borderRadius:8}} alt=""/><p style={{fontWeight:'bold'}}>{p.name}</p><p>${p.price}</p></Link>
               <div style={{display:'flex', gap:6}}><button onClick={()=>addToCart(p)} style={{flex:1, padding:8, background:'black', color:'white', borderRadius:6, border:'none', cursor:'pointer'}}>Add to Cart</button><button onClick={()=>toggleWishlist(p)} style={{padding:8, background:'#ffe0e0', borderRadius:6, border:'none', cursor:'pointer'}}>Remove</button></div>
             </div>
           ))}
@@ -291,13 +321,11 @@ function Register(){
   )
 }
 
-// ===== 3. CART WITH QUANTITY + ADDRESS =====
 function Cart(){
   const { cart, remove, clearCart, updateQty } = useContext(CartContext); 
   const { user } = useContext(AuthContext); 
   const [address,setAddress]=useState(''); const [phone,setPhone]=useState(''); const [fullName,setFullName]=useState('');
   const nav=useNavigate();
-  // Group by _id for quantity
   const grouped = Object.values(cart.reduce((acc,item)=>{
     if(!acc[item._id]) acc[item._id] = {...item, qty:0};
     acc[item._id].qty +=1;
@@ -323,7 +351,7 @@ function Cart(){
         fetch(`${API}/api/pay/verify`,{
           method:'POST', headers:{'Content-Type':'application/json','x-auth-token':localStorage.getItem('token')},
           body:JSON.stringify({reference: response.reference, items: grouped, total, email: user.email, address, phone, fullName})
-        }).then(r=>r.json()).then(d=>{ alert('Payment Success! ✅ Ref: '+response.reference+'\nEmail confirmation sent!'); clearCart(); nav('/myorders'); })
+        }).then(r=>r.json()).then(d=>{ alert('Payment Success! ✅ Ref: '+response.reference); clearCart(); nav('/myorders'); })
         .catch(()=>{ alert('Payment done: '+response.reference); clearCart(); nav('/myorders'); });
       },
       onClose: function(){}
@@ -334,8 +362,8 @@ function Cart(){
   return (
     <div style={{padding:20, maxWidth:700, margin:'0 auto'}}>
       <h2>Cart ({grouped.length} types, {cart.length} items) - ${total}</h2>
-      {grouped.map((c,i)=><div key={c._id} style={{display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom:'1px solid #eee', padding:12, background:'white', marginBottom:6, borderRadius:8}}>
-        <div><b>{sanitize(c.name)}</b> - ${c.price} x {c.qty} = <b>${c.price*c.qty}</b></div>
+      {grouped.map((c)=><div key={c._id} style={{display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom:'1px solid #eee', padding:12, background:'white', marginBottom:6, borderRadius:8}}>
+        <div style={{display:'flex', gap:10, alignItems:'center'}}><img src={resolveImg(getFirstImage(c))} style={{width:50, height:50, objectFit:'cover', borderRadius:6}} alt=""/><div><b>{sanitize(c.name)}</b><div style={{fontSize:12}}>${c.price} x {c.qty} = <b>${c.price*c.qty}</b></div></div></div>
         <div style={{display:'flex', gap:6, alignItems:'center'}}>
           <button onClick={()=>updateQty(c._id, -1)} style={{width:28, height:28, borderRadius:6, border:'1px solid #ddd', cursor:'pointer'}}>−</button>
           <span>{c.qty}</span>
@@ -351,7 +379,6 @@ function Cart(){
           <input value={phone} onChange={e=>setPhone(e.target.value)} placeholder="Phone Number e.g. +49..." style={{width:'100%', padding:12, borderRadius:8, border:'1px solid #ddd', marginBottom:8, boxSizing:'border-box'}}/>
           <textarea value={address} onChange={e=>setAddress(e.target.value)} placeholder="Full Delivery Address - Street, City, Hamburg..." style={{width:'100%', padding:12, borderRadius:8, border:'1px solid #ddd', minHeight:60, boxSizing:'border-box'}}></textarea>
           <button onClick={payWithPaystack} style={{marginTop:16, padding:16, background:'#0AA', color:'white', width:'100%', borderRadius:12, fontSize:18, fontWeight:'bold', cursor:'pointer', border:'none'}}>💳 Pay with Paystack - ${total}</button>
-          <p style={{fontSize:11, color:'#666', textAlign:'center'}}>Test card: 4084084084084081 - You will get email confirmation ✅</p>
         </div>
       )}
       {grouped.length===0 && <p>Cart empty - Go to Store</p>}
@@ -363,7 +390,7 @@ function MyOrders(){
   const [orders,setOrders]=useState([]);
   const nav=useNavigate();
   useEffect(()=>{ fetch(`${API}/api/orders/my`,{headers:{'x-auth-token':localStorage.getItem('token')}}).then(r=>r.json()).then(d=> Array.isArray(d)? setOrders(d): setOrders([])).catch(()=> setOrders([])); },[]);
-  return <div style={{padding:20, maxWidth:700, margin:'0 auto'}}><h2>My Orders</h2>{orders.map(o=><div key={o._id} onClick={()=>nav(`/order/${o._id}`)} style={{border:'1px solid #ddd', padding:16, marginBottom:10, borderRadius:12, background:'white', cursor:'pointer'}}><div style={{display:'flex', justifyContent:'space-between'}}><b>${o.total}</b><span style={{padding:'4px 8px', borderRadius:6, background: o.status==='Paid'?'#e0ffe0': o.status==='Shipped'?'#fff3cd':'#d4edda', fontSize:12}}>{o.status}</span></div><div style={{fontSize:12, color:'#666'}}>{o.items?.length || o.items?.reduce((s,i)=>s+(i.qty||1),0) || 0} items • {new Date(o.createdAt).toLocaleDateString()}</div><small>Ref: {sanitize(o.paystackRef)} • {sanitize(o.address)?.slice(0,30)} • Click 👁️</small></div>)}{orders.length===0 && <p>No orders yet</p>}</div>
+  return <div style={{padding:20, maxWidth:700, margin:'0 auto'}}><h2>My Orders</h2>{orders.map(o=><div key={o._id} onClick={()=>nav(`/order/${o._id}`)} style={{border:'1px solid #ddd', padding:16, marginBottom:10, borderRadius:12, background:'white', cursor:'pointer'}}><div style={{display:'flex', justifyContent:'space-between'}}><b>${o.total}</b><span style={{padding:'4px 8px', borderRadius:6, background: o.status==='Paid'?'#e0ffe0': o.status==='Shipped'?'#fff3cd':'#d4edda', fontSize:12}}>{o.status}</span></div><div style={{fontSize:12, color:'#666'}}>{o.items?.length} items • {new Date(o.createdAt).toLocaleDateString()}</div><small>Ref: {sanitize(o.paystackRef)} • Click 👁️</small></div>)}{orders.length===0 && <p>No orders yet</p>}</div>
 }
 
 function OrderDetails(){
@@ -382,7 +409,6 @@ function OrderDetails(){
         <p><b>Customer:</b> {sanitize(order.fullName)} - {sanitize(order.phone)}</p>
         <p><b>Address:</b> {sanitize(order.address)}</p>
         <p><b>Email:</b> {order.email || order.userEmail}</p>
-        <p><b>Date:</b> {new Date(order.createdAt).toLocaleString()}</p>
         <h3>Items:</h3>
         {(order.items||[]).map((it,i)=><div key={i} style={{display:'flex', justifyContent:'space-between', padding:8, borderBottom:'1px solid #eee'}}><span>{sanitize(it.name)} {it.qty ? `x${it.qty}` : ''}</span><b>${Number(it.price)*(it.qty||1)}</b></div>)}
       </div>
@@ -392,28 +418,54 @@ function OrderDetails(){
 }
 
 function Admin(){
-  const [orders,setOrders]=useState([]); const [products,setProducts]=useState([]);
-  const [name,setName]=useState(''); const [price,setPrice]=useState(''); const [image,setImage]=useState(''); const [category,setCategory]=useState('phones'); const [desc,setDesc]=useState(''); const [uploading,setUploading]=useState(false);
+  const [orders,setOrders]=useState([]); 
+  const [products,setProducts]=useState([]);
+  const [name,setName]=useState(''); const [price,setPrice]=useState(''); const [images,setImages]=useState([]); const [category,setCategory]=useState('phones'); const [desc,setDesc]=useState(''); const [uploading,setUploading]=useState(false);
   const fetchAll = ()=>{
     fetch(`${API}/api/orders/all`,{headers:{'x-auth-token':localStorage.getItem('token')}}).then(r=>r.json()).then(d=>Array.isArray(d)?setOrders(d):setOrders([])).catch(()=>setOrders([]));
     fetch(`${API}/api/products`).then(r=>r.json()).then(d=>Array.isArray(d)?setProducts(d):setProducts([])).catch(()=>setProducts([]));
   };
   useEffect(()=>{ fetchAll(); },[]);
+
   const handleFileUpload = async (e) => {
-    const f = e.target.files[0]; if(!f) return;
-    if(f.size > 2*1024*1024) return alert('Max 2MB');
+    const files = Array.from(e.target.files); if(!files.length) return;
+    if(files.length + images.length > 5) return alert('Max 5 images total');
+    for(let f of files){ if(f.size > 2*1024*1024) return alert(`${f.name} too big - Max 2MB`); }
     setUploading(true);
-    const fd = new FormData(); fd.append('image', f);
-    try{ const res = await fetch(`${API}/api/upload`,{method:'POST',headers:{'x-auth-token':localStorage.getItem('token')},body:fd}); const data = await res.json(); if(data.path){ setImage(`${API}${data.path}`); alert('Uploaded ✅'); } else alert(data.msg || 'Upload failed'); }catch{ alert('Upload error') }
+    try{
+      // Try multiple endpoint first, fallback to single uploads
+      let uploaded = [];
+      const fd = new FormData();
+      files.forEach(f=>fd.append('images', f));
+      let res = await fetch(`${API}/api/upload-multiple`,{method:'POST',headers:{'x-auth-token':localStorage.getItem('token')},body:fd});
+      if(res.ok){
+        const data = await res.json();
+        if(data.paths) uploaded = data.paths.map(p=> p.startsWith('http') ? p : `${API}${p}`);
+        else if(data.path) uploaded = [`${API}${data.path}`];
+      } else {
+        // fallback: upload one by one to /api/upload
+        for(let f of files){
+          const fd2 = new FormData(); fd2.append('image', f);
+          const r2 = await fetch(`${API}/api/upload`,{method:'POST',headers:{'x-auth-token':localStorage.getItem('token')},body:fd2});
+          const d2 = await r2.json();
+          if(d2.path) uploaded.push(`${API}${d2.path}`);
+        }
+      }
+      if(uploaded.length){
+        setImages(prev=>[...prev, ...uploaded].slice(0,5));
+        alert(`${uploaded.length} images uploaded ✅`);
+      } else alert('Upload failed - check server.js has /api/upload-multiple route');
+    }catch{ alert('Upload error - make sure server.js updated'); }
     setUploading(false);
   };
+
   const addProduct=async(e)=>{
     e.preventDefault(); 
-    if(!image) return alert('Upload image first');
+    if(images.length===0) return alert('Upload at least 1 image');
     try {
-      const res = await fetch(`${API}/api/products`,{method:'POST',headers:{'Content-Type':'application/json','x-auth-token':localStorage.getItem('token')},body:JSON.stringify({name: sanitize(name), price:Number(price), image, category, description: sanitize(desc)})});
+      const res = await fetch(`${API}/api/products`,{method:'POST',headers:{'Content-Type':'application/json','x-auth-token':localStorage.getItem('token')},body:JSON.stringify({name: sanitize(name), price:Number(price), images, image: images[0], category, description: sanitize(desc)})});
       const data = await res.json(); 
-      if(data._id){ alert('Product Added ✅'); setName('');setPrice('');setImage('');setDesc(''); fetchAll(); } else alert(data.msg || 'Failed');
+      if(data._id){ alert('Product Added ✅ with '+images.length+' images'); setName('');setPrice('');setImages([]);setDesc(''); fetchAll(); } else alert(data.msg || 'Failed');
     } catch { alert('Add failed'); }
   };
   const deleteProduct = async (id, productName)=>{
@@ -435,25 +487,53 @@ function Admin(){
     <div style={{padding:20}}>
       <h2 style={{textAlign:'center'}}>Admin - Orders ({orders.length}) - Sales ${totalSales} - Products ({products.length})</h2>
       <form onSubmit={addProduct} style={{border:'2px solid #222', padding:24, maxWidth:700, margin:'0 auto 30px auto', borderRadius:18, background:'white'}}>
-        <h3 style={{textAlign:'center'}}>Add Product</h3>
+        <h3 style={{textAlign:'center'}}>Add Product - Multi Image (Max 5)</h3>
         <div style={{display:'flex', gap:10, marginBottom:10}}><input value={name} onChange={e=>setName(e.target.value)} placeholder="Product Name" required style={{flex:2, padding:12, borderRadius:8, border:'1px solid #ccc'}}/><select value={category} onChange={e=>setCategory(e.target.value)} style={{flex:1, padding:12, borderRadius:8}}><option>phones</option><option>laptops</option><option>shirts</option><option>watches</option><option>headphones</option><option>gaming</option><option>accessories</option></select></div>
         <div style={{display:'flex', gap:10, marginBottom:10}}><input value={desc} onChange={e=>setDesc(e.target.value)} placeholder="Description" required style={{flex:2, padding:12, borderRadius:8, border:'1px solid #ccc'}}/><input value={price} onChange={e=>setPrice(e.target.value)} placeholder="Price $" type="number" required style={{flex:1, padding:12, borderRadius:8, border:'1px solid #ccc'}}/></div>
-        <div style={{background:'#eef6ff', padding:12, borderRadius:10, border:'2px dashed #0AA', textAlign:'center', marginBottom:10}}><input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFileUpload}/>{uploading && <p>Uploading...</p>}</div>
-        <input value={image} onChange={e=>setImage(e.target.value)} placeholder="Image URL" style={{width:'100%', padding:12, borderRadius:8, border:'1px solid #ccc', marginBottom:10, boxSizing:'border-box'}}/>
-        {image && <img src={image} alt="preview" style={{width:'100%', maxHeight:200, objectFit:'contain', marginBottom:10}}/>}
-        <button type="submit" style={{width:'100%', padding:14, background:'black', color:'white', borderRadius:10, fontWeight:'bold', border:'none', cursor:'pointer'}}>➕ Add Product</button>
+        
+        <div style={{background:'#eef6ff', padding:14, borderRadius:10, border:'2px dashed #0AA', textAlign:'center', marginBottom:10}}>
+          <label style={{fontWeight:'bold', display:'block', marginBottom:8}}>📁 Upload 1-5 Images - Select multiple at once</label>
+          <input type="file" multiple accept="image/jpeg,image/png,image/webp" onChange={handleFileUpload}/>
+          {uploading && <p style={{color:'#0AA', fontWeight:'bold'}}>Uploading... please wait</p>}
+        </div>
+        
+        {images.length>0 && (
+          <div style={{display:'flex', gap:8, flexWrap:'wrap', marginBottom:12, background:'#f9f9f9', padding:10, borderRadius:8}}>
+            {images.map((img,i)=>(
+              <div key={i} style={{position:'relative'}}>
+                <img src={img} alt="preview" style={{width:80, height:80, objectFit:'cover', borderRadius:8, border:'2px solid #0AA'}}/>
+                <button type="button" onClick={()=>setImages(images.filter((_,idx)=>idx!==i))} style={{position:'absolute', top:-6, right:-6, background:'red', color:'white', border:'none', borderRadius:20, width:22, height:22, cursor:'pointer', fontWeight:'bold'}}>x</button>
+                <div style={{fontSize:10, textAlign:'center'}}>{i===0 ? 'MAIN' : `IMG ${i+1}`}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <button type="submit" style={{width:'100%', padding:14, background:'black', color:'white', borderRadius:10, fontWeight:'bold', border:'none', cursor:'pointer'}}>➕ Add Product with {images.length} Images</button>
       </form>
+
+      <h3>🛒 Products - Showing image count</h3>
+      <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:12, marginBottom:30}}>
+        {products.map(p=>(
+          <div key={p._id} style={{border:'1px solid #ddd', padding:10, borderRadius:10, background:'white'}}>
+            <img src={resolveImg(getFirstImage(p))} style={{width:'100%', height:120, objectFit:'cover', borderRadius:8}} alt=""/>
+            <p style={{margin:'6px 0 2px 0', fontWeight:'bold', fontSize:13}}>{sanitize(p.name)} {getAllImages(p).length>1 && <span style={{background:'black', color:'white', fontSize:10, padding:'2px 5px', borderRadius:4}}>{getAllImages(p).length} imgs</span>}</p>
+            <p style={{margin:0, fontSize:12}}>${p.price} - {p.category}</p>
+            <button onClick={()=>deleteProduct(p._id, p.name)} style={{width:'100%', marginTop:6, background:'#FF4444', color:'white', padding:6, borderRadius:6, border:'none', cursor:'pointer'}}>🗑️ Delete</button>
+          </div>
+        ))}
+      </div>
 
       <h3>📦 All Orders - Update Status</h3>
       <div style={{display:'grid', gap:8}}>
         {orders.map(o=>(
           <div key={o._id} style={{border:'1px solid #ddd', padding:12, borderRadius:8, background:'white'}}>
             <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:8}}>
-              <div><Link to={`/order/${o._id}`} style={{fontWeight:'bold', color:'#0AA'}}>{o.total}$ - {o.status} - {sanitize(o.email||o.userEmail)}</Link><div style={{fontSize:11}}>{sanitize(o.fullName)} • {sanitize(o.phone)} • {sanitize(o.address)?.slice(0,40)}</div><div style={{fontSize:11}}>Ref: {o.paystackRef}</div></div>
+              <div><Link to={`/order/${o._id}`} style={{fontWeight:'bold', color:'#0AA'}}>{o.total}$ - {o.status} - {sanitize(o.email||o.userEmail)}</Link><div style={{fontSize:11}}>{sanitize(o.fullName)} • {sanitize(o.phone)}</div></div>
               <div style={{display:'flex', gap:6}}>
                 <button onClick={()=>updateStatus(o._id,'Shipped')} style={{background:'#fff3cd', border:'1px solid #ddd', padding:'6px 10px', borderRadius:6, cursor:'pointer'}}>🚚 Shipped</button>
                 <button onClick={()=>updateStatus(o._id,'Delivered')} style={{background:'#d4edda', border:'1px solid #ddd', padding:'6px 10px', borderRadius:6, cursor:'pointer'}}>✅ Delivered</button>
-                <button onClick={()=>deleteOrder(o._id)} style={{background:'#FF4444', color:'white', padding:'6px 10px', borderRadius:6, border:'none', cursor:'pointer'}}>🗑️</button>
+                <button onClick={()=>deleteOrder(o._id)} style={{background:'#FF4444', color:'white', padding:'6px 10px', borderRadius:6, border:'none'}}>🗑️</button>
               </div>
             </div>
           </div>
@@ -471,18 +551,22 @@ export default function App(){
   const addToCart=(p)=>{ setCart([...cart,p]); };
   const remove=(id)=>{ setCart(cart.filter(c=>c._id!==id)); };
   const updateQty=(id, delta)=>{
+    if(delta===1){ 
+      const item = cart.find(c=>c._id===id) || { _id:id };
+      // find original product data to copy price etc - use cart item
+      const real = cart.find(c=>c._id===id);
+      setCart([...cart, real || item]); 
+      return; 
+    }
     let found=false;
     let newCart=[];
-    if(delta===1){ setCart([...cart, cart.find(c=>c._id===id) || { _id:id }]); return; }
-    // remove one instance
     for(let item of cart){ if(!found && item._id===id){ found=true; continue; } newCart.push(item); }
     setCart(newCart);
   };
   const clearCart=()=>setCart([]);
   const toggleWishlist=(p)=>{
     const exists = wishlist.find(w=>w._id===p._id);
-    let newList;
-    if(exists){ newList = wishlist.filter(w=>w._id!==p._id); } else { newList = [...wishlist, p]; }
+    let newList = exists ? wishlist.filter(w=>w._id!==p._id) : [...wishlist, p];
     setWishlist(newList);
     localStorage.setItem('wishlist', JSON.stringify(newList));
   };

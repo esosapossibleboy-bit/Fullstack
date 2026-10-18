@@ -17,13 +17,14 @@ const app = express();
 app.use(helmet());
 app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
 
-// === 2. CORS WHITELIST ===
+// === 2. CORS WHITELIST - UPDATED WITH YOUR NEW DOMAIN FROM SCREENSHOT ===
 const allowedOrigins = [
   'https://esosa-shop.vercel.app',
   'https://fullstack-orpin-three.vercel.app',
   'https://fullstack-lake-seven.vercel.app',
   'https://fullstack2-i49ox4fax-esosatech.vercel.app',
   'https://fullstack2-738c5aa6r-esosatech.vercel.app',
+  'https://fullstack2-11791nbyd-esosatech.vercel.app', // YOUR NEW ONE FROM SCREENSHOT
   'http://localhost:5173',
   'http://localhost:3000'
 ];
@@ -73,7 +74,7 @@ const fileFilter = (req,file,cb) => {
 };
 const upload = multer({ storage, fileFilter, limits: { fileSize: 2*1024*1024 }});
 
-mongoose.connect(process.env.MONGO_URI).then(()=>console.log('MongoDB Secure Connected - 9 Features Live'));
+mongoose.connect(process.env.MONGO_URI).then(()=>console.log('MongoDB Secure Connected - Multi Image Gallery Live'));
 
 // === 5. RATE LIMIT ===
 const authLimiter = rateLimit({ windowMs: 15*60*1000, max: 20, message: {msg:'Too many attempts'} });
@@ -89,18 +90,18 @@ const User = mongoose.model('User', new mongoose.Schema({
   isAdmin: { type: Boolean, default: false }
 }));
 
-// === UPDATED PRODUCT WITH RATING + REVIEWS ===
+// === UPDATED PRODUCT WITH MULTIPLE IMAGES + RATING + REVIEWS ===
 const Product = mongoose.model('Product', new mongoose.Schema({
   name: {type:String, required:true, trim:true, maxlength:100},
   category: {type:String, enum:['phones','laptops','shirts','watches','headphones','gaming','accessories']},
   description: {type:String, maxlength:500},
   price: {type:Number, min:0, max:100000},
-  image: String,
+  image: String, // old single - keep for backwards compat
+  images: {type:[String], default: []}, // NEW - multiple images array
   rating: {type:Number, default:4.5},
   reviews: [{user:String, rating:Number, text:String, createdAt:{type:Date, default:Date.now}}]
 }));
 
-// === UPDATED ORDER WITH ADDRESS, PHONE, FULLNAME ===
 const Order = mongoose.model('Order', new mongoose.Schema({
   userId: String, 
   userEmail: String, 
@@ -173,6 +174,7 @@ app.post('/api/auth/google', authLimiter, async (req,res)=>{
   }catch{ res.status(500).json({msg:'Google login failed'}) }
 });
 
+// OLD SINGLE UPLOAD - KEEP FOR BACKWARDS
 app.post('/api/upload', auth, upload.single('image'), (req,res)=>{
   if(req.user.isAdmin!==true) {
     if(req.file) fs.unlinkSync(req.file.path);
@@ -180,6 +182,17 @@ app.post('/api/upload', auth, upload.single('image'), (req,res)=>{
   }
   if(!req.file) return res.status(400).json({msg:'No file'});
   res.json({path:`/uploads/${req.file.filename}`});
+});
+
+// === NEW - MULTIPLE IMAGES UPLOAD (MAX 5) ===
+app.post('/api/upload-multiple', auth, upload.array('images', 5), (req,res)=>{
+  if(req.user.isAdmin!==true) {
+    if(req.files) req.files.forEach(f=>fs.unlinkSync(f.path));
+    return res.status(403).json({msg:'Admin only'});
+  }
+  if(!req.files || req.files.length===0) return res.status(400).json({msg:'No files uploaded'});
+  const paths = req.files.map(f=>`/uploads/${f.filename}`);
+  res.json({paths});
 });
 
 app.get('/api/products', async (req,res)=>{
@@ -200,14 +213,12 @@ app.get('/api/products/:id', async (req,res)=>{
   }catch{ res.status(500).json({msg:'Error fetching product'}) }
 });
 
-// NEW - ADD REVIEW
 app.post('/api/products/:id/review', auth, async (req,res)=>{
   try{
     const {rating, text} = req.body;
     const product = await Product.findById(req.params.id);
     if(!product) return res.status(404).json({msg:'Not found'});
     product.reviews.push({user: req.user.id, rating: Number(rating)||5, text: String(text).slice(0,200)});
-    // update average rating
     const avg = product.reviews.reduce((s,r)=>s+r.rating,0)/product.reviews.length;
     product.rating = avg;
     await product.save();
@@ -215,13 +226,25 @@ app.post('/api/products/:id/review', auth, async (req,res)=>{
   }catch{ res.status(500).json({msg:'Review failed'}) }
 });
 
+// UPDATED - NOW ACCEPTS images ARRAY
 app.post('/api/products', auth, async (req,res)=>{
   try{
     if(!req.user.isAdmin) return res.status(403).json({msg:'Admin only'});
-    const {name, category, description, price, image} = req.body;
+    const {name, category, description, price, image, images} = req.body;
     if(!name || !price) return res.status(400).json({msg:'Name and price required'});
     if(String(description).length > 500) return res.status(400).json({msg:'Description too long'});
-    res.json(await Product.create({name, category, description, price:Number(price), image, rating:4.5, reviews:[]}));
+    
+    // NEW LOGIC: support multiple
+    let finalImages = [];
+    if(Array.isArray(images) && images.length) finalImages = images;
+    else if(image) finalImages = [image];
+    
+    if(finalImages.length===0) return res.status(400).json({msg:'At least 1 image required'});
+    if(finalImages.length>5) return res.status(400).json({msg:'Max 5 images'});
+    
+    const finalImage = finalImages[0];
+    const product = await Product.create({name, category, description, price:Number(price), image:finalImage, images:finalImages, rating:4.5, reviews:[]});
+    res.json(product);
   }catch{ res.status(500).json({msg:'Failed'}) }
 });
 
@@ -231,7 +254,6 @@ app.delete('/api/products/:id', auth, async (req,res)=>{
   res.json({msg:'Deleted'});
 });
 
-// UPDATED - NOW SAVES ADDRESS, PHONE, FULLNAME
 app.post('/api/pay/verify', auth, async (req,res)=>{
   try{
     const {reference, items, total, email, address, phone, fullName} = req.body;
@@ -287,7 +309,6 @@ app.delete('/api/orders/:id', auth, async (req,res)=>{
   }catch{ res.status(500).json({msg:'Delete failed'}) }
 });
 
-// NEW - UPDATE ORDER STATUS TO SHIPPED / DELIVERED
 app.patch('/api/orders/:id/status', auth, async (req,res)=>{
   try{
     if(req.user.isAdmin!==true) return res.status(403).json({msg:'Admin only'});
@@ -299,7 +320,7 @@ app.patch('/api/orders/:id/status', auth, async (req,res)=>{
   }catch{ res.status(500).json({msg:'Status update failed'}) }
 });
 
-app.get('/', (req,res)=> res.send('Esosa API Secure Live - 9 Features Ready ✅ - Quantity, Address, Wishlist, Ratings, Status'));
+app.get('/', (req,res)=> res.send('Esosa API Live - Multi Image Gallery Ready ✅'));
 
 app.use((err, req, res, next)=>{
   if(err.type === 'entity.too.large' || err.status === 413 || err.message.includes('too large')){
@@ -316,4 +337,4 @@ app.use((err, req, res, next)=>{
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, ()=> console.log(`🔒 SECURE Server Live on ${PORT} - 9 Features Ready ✅`));
+app.listen(PORT, ()=> console.log(`🔒 SECURE Server Live on ${PORT} - Multi Image Gallery Ready ✅`));
