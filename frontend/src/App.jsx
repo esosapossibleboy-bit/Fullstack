@@ -25,7 +25,6 @@ function checkPasswordStrength(pwd){
   };
 }
 
-// === STORE - NO DELETE BUTTON ===
 function Store(){
   const [products,setProducts] = useState([]);
   const [search,setSearch] = useState('');
@@ -88,12 +87,16 @@ function Login(){
     localStorage.setItem('token',data.token); localStorage.setItem('user',JSON.stringify(data.user)); setUser(data.user); nav('/');
   };
   return (
-    <form onSubmit={submit} className="form" style={{maxWidth:400, margin:'30px auto', padding:20, border:'1px solid #ddd', borderRadius:12}}>
+    <form onSubmit={submit} className="form" style={{maxWidth:400, margin:'30px auto', padding:20, border:'1px solid #ddd', borderRadius:12, display:'flex', flexDirection:'column', gap:10}}>
       <h2>Login</h2>
       <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="email" required/>
       <input type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="password" required/>
-      <button style={{width:'100%', marginTop:10}}>Login</button>
-      <button type="button" onClick={googleLogin} style={{width:'100%', marginTop:10, background:'white', color:'black', border:'1px solid #ccc'}}>🔵 Continue with Google</button>
+      <button style={{width:'100%'}}>Login</button>
+      <div style={{textAlign:'center', color:'#888', fontSize:13, margin:'4px 0'}}>OR</div>
+      <button type="button" onClick={googleLogin} style={{width:'100%', background:'white', color:'#444', border:'1px solid #ccc', padding:'10px', borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', gap:10, fontWeight:600}}>
+        <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="google" style={{width:20, height:20}} />
+        Continue with Google
+      </button>
     </form>
   );
 }
@@ -114,7 +117,7 @@ function Register(){
   };
 
   const googleSignup = async () => {
-    const googleEmail = prompt('Enter Gmail for Google Signup:');
+    const googleEmail = prompt('Enter Gmail:');
     if(!googleEmail) return;
     const res = await fetch(`${API}/api/auth/google`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:googleEmail, firstName:form.firstName || 'Google', lastName:form.lastName || 'User'})});
     const data = await res.json();
@@ -143,7 +146,11 @@ function Register(){
       )}
       {error && <p style={{color:'red', fontSize:13}}>{error}</p>}
       <button disabled={!isStrong} style={{opacity: isStrong ? 1 : 0.5}}>{isStrong ? 'Register ✅' : 'Weak Password ❌'}</button>
-      <button type="button" onClick={googleSignup} style={{background:'white', color:'black', border:'1px solid #ccc'}}>🔵 Sign up with Google</button>
+      <div style={{textAlign:'center', color:'#888', fontSize:13, margin:'4px 0'}}>OR</div>
+      <button type="button" onClick={googleSignup} style={{width:'100%', background:'white', color:'#444', border:'1px solid #ccc', padding:'10px', borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', gap:10, fontWeight:600}}>
+        <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="google" style={{width:20, height:20}} />
+        Sign up with Google
+      </button>
     </form>
   )
 }
@@ -151,26 +158,17 @@ function Register(){
 function Cart(){
   const { cart, remove } = useContext(CartContext); const { user } = useContext(AuthContext); const nav=useNavigate();
   const total = cart.reduce((s,i)=>s+ (Number(i.price) || 0),0);
-
   const payWithPaystack = () => {
     if(!window.PaystackPop){ const s=document.createElement('script'); s.src='https://js.paystack.co/v1/inline.js'; document.body.appendChild(s); setTimeout(()=>payWithPaystack(),1500); return; }
     const handler = window.PaystackPop.setup({
-      key: PAYSTACK_PUBLIC_KEY,
-      email: user.email,
-      amount: total*100,
-      currency: 'NGN',
-      ref: 'ESOSA_'+Date.now(),
+      key: PAYSTACK_PUBLIC_KEY, email: user.email, amount: total*100, currency: 'NGN', ref: 'ESOSA_'+Date.now(),
       callback: async function(response){
         const res = await fetch(`${API}/api/pay/verify`,{method:'POST',headers:{'Content-Type':'application/json','x-auth-token':localStorage.getItem('token')},body:JSON.stringify({reference: response.reference, items: cart, total, email: user.email})});
-        await res.json();
-        alert('Payment Success! ✅ Ref: '+response.reference);
-        nav('/myorders');
+        await res.json(); alert('Payment Success! ✅ Ref: '+response.reference); nav('/myorders');
       },
       onClose: function(){ alert('Payment cancelled'); }
-    });
-    handler.openIframe();
+    }); handler.openIframe();
   };
-
   return (
     <div style={{padding:20}}>
       <h2>Cart - ₦{total} / ${total}</h2>
@@ -189,23 +187,17 @@ function MyOrders(){
 function Admin(){
   const [orders,setOrders]=useState([]); const [name,setName]=useState(''); const [price,setPrice]=useState(''); const [image,setImage]=useState(''); const [category,setCategory]=useState('phones'); const [desc,setDesc]=useState(''); const [uploading,setUploading]=useState(false);
   useEffect(()=>{ fetch(`${API}/api/orders/all`,{headers:{'x-auth-token':localStorage.getItem('token')}}).then(r=>r.json()).then(d=>Array.isArray(d)?setOrders(d):setOrders([])) },[]);
-
   const handleFileUpload = async (e) => {
     const f = e.target.files[0]; if(!f) return; setUploading(true);
     const fd = new FormData(); fd.append('image', f);
-    try{
-      const res = await fetch(`${API}/api/upload`,{method:'POST',headers:{'x-auth-token':localStorage.getItem('token')},body:fd});
-      const data = await res.json(); if(data.path){ setImage(`${API}${data.path}`); alert('Uploaded ✅'); } else alert(data.msg);
-    }catch(err){ alert(err.message) }
+    try{ const res = await fetch(`${API}/api/upload`,{method:'POST',headers:{'x-auth-token':localStorage.getItem('token')},body:fd}); const data = await res.json(); if(data.path){ setImage(`${API}${data.path}`); alert('Uploaded ✅'); } else alert(data.msg); }catch(err){ alert(err.message) }
     setUploading(false);
   };
-
   const addProduct=async(e)=>{
     e.preventDefault(); if(!image) return alert('Upload image first');
     const res = await fetch(`${API}/api/products`,{method:'POST',headers:{'Content-Type':'application/json','x-auth-token':localStorage.getItem('token')},body:JSON.stringify({name, price:Number(price), image, category, description:desc})});
     const data = await res.json(); if(data._id){ alert('Product Added ✅'); setName('');setPrice('');setImage('');setDesc(''); } else alert(data.msg);
   };
-
   const totalSales = orders.reduce((s,o)=>s+ (Number(o.total) || 0),0);
   return (
     <div style={{padding:20}}>
@@ -214,7 +206,7 @@ function Admin(){
         <h3>Add Product</h3>
         <input value={name} onChange={e=>setName(e.target.value)} placeholder="Product Name" required/>
         <select value={category} onChange={e=>setCategory(e.target.value)} style={{padding:8, margin:'6px 0'}}><option value="phones">phones</option><option value="laptops">laptops</option><option value="shirts">shirts</option><option value="watches">watches</option><option value="headphones">headphones</option><option value="gaming">gaming</option><option value="accessories">accessories</option></select>
-        <input value={desc} onChange={e=>setDesc(e.target.value)} placeholder="Description - e.g. Latest iPhone with A17 chip" required/>
+        <input value={desc} onChange={e=>setDesc(e.target.value)} placeholder="Description" required/>
         <input value={price} onChange={e=>setPrice(e.target.value)} placeholder="Price" type="number" required/>
         <div style={{background:'#f5f5f5', padding:10, margin:'10px 0', borderRadius:8}}><label><b>📁 Upload from Phone</b></label><input type="file" accept="image/*" onChange={handleFileUpload} style={{marginTop:5}}/>{uploading && <p>Uploading... ⏳</p>}</div>
         <input value={image} onChange={e=>setImage(e.target.value)} placeholder="https://... image URL" />
@@ -231,13 +223,7 @@ export default function App(){
   const addToCart=(p)=>setCart([...cart,p]);
   const remove=(i)=>setCart(cart.filter((_,idx)=>idx!==i));
   const isAdmin = user?.isAdmin === true;
-
-  useEffect(()=>{
-    const script = document.createElement('script');
-    script.src = 'https://js.paystack.co/v1/inline.js';
-    document.body.appendChild(script);
-  },[]);
-
+  useEffect(()=>{ const script = document.createElement('script'); script.src = 'https://js.paystack.co/v1/inline.js'; document.body.appendChild(script); },[]);
   return (
     <AuthContext.Provider value={{user,setUser}}><CartContext.Provider value={{cart,addToCart,remove}}>
       <BrowserRouter>
