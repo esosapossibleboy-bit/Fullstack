@@ -147,7 +147,6 @@ function ProductDetails(){
       <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:30, background:'white', padding:24, borderRadius:20, boxShadow:'0 10px 30px rgba(0,0,0,0.08)'}} className="responsive-grid">
         <div>
           <img src={resolveImg(currentImg)} style={{width:'100%', height:420, objectFit:'contain', borderRadius:14, background:'#f9f9f9', border:'1px solid #eee'}} alt={product.name}/>
-          {/* THUMBNAILS - SWITCH IMAGE */}
           {allImages.length>1 && (
             <div style={{display:'flex', gap:10, marginTop:14, overflowX:'auto', paddingBottom:6}}>
               {allImages.map((img,i)=>(
@@ -182,12 +181,8 @@ function ProductDetails(){
             <button onClick={()=>{ for(let i=0;i<qty;i++) addToCart(product); nav('/cart'); }} style={{flex:2, padding:14, background:'black', color:'white', borderRadius:12, fontSize:15, fontWeight:'bold', border:'none', cursor:'pointer'}}>🛒 Buy Now - ${Number(product.price)*qty}</button>
             <button onClick={()=>{ for(let i=0;i<qty;i++) addToCart(product); }} style={{flex:1, padding:14, background:'white', color:'black', border:'2px solid black', borderRadius:12, fontSize:14, fontWeight:'bold', cursor:'pointer'}}>Add to Cart</button>
           </div>
-          <div style={{marginTop:6, fontSize:12, color:'#666'}}>
-            <p>✅ Free delivery in Hamburg • ✅ Pay with Paystack • ✅ 7 Days Return</p>
-          </div>
         </div>
       </div>
-
       <div style={{marginTop:30, background:'white', padding:20, borderRadius:14}}>
         <h3>⭐ Customer Reviews ({reviews.length})</h3>
         {reviews.map((r,i)=><div key={i} style={{borderBottom:'1px solid #eee', padding:'10px 0'}}><b>{r.user}</b> - <span style={{color:'gold'}}>{'★'.repeat(r.rating)}</span><p style={{margin:'4px 0', fontSize:14, color:'#444'}}>{r.text}</p></div>)}
@@ -196,7 +191,6 @@ function ProductDetails(){
           <button onClick={()=>{ if(!reviewText) return; setReviews([{user:'You', rating:5, text:reviewText}, ...reviews]); setReviewText(''); alert('Review added ✅'); }} style={{padding:'12px 18px', background:'black', color:'white', borderRadius:8, border:'none', cursor:'pointer'}}>Post</button>
         </div>
       </div>
-
       {related.length>0 && (
         <div style={{marginTop:30}}>
           <h2>You may also like</h2>
@@ -235,6 +229,7 @@ function Wishlist(){
   )
 }
 
+// === LOGIN WITH GOOGLE LOGO ===
 function Login(){
   const [email,setEmail]=useState(''); const [pass,setPass]=useState('');
   const [loading,setLoading]=useState(false); const [attempts,setAttempts]=useState(0);
@@ -268,13 +263,17 @@ function Login(){
         <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" required type="email" style={{padding:16, borderRadius:12, border:'1px solid #ddd', fontSize:16}}/>
         <input type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="••••••••" required style={{padding:16, borderRadius:12, border:'1px solid #ddd', fontSize:16}}/>
         <button disabled={loading} style={{padding:16, background:'black', color:'white', borderRadius:12, fontSize:16, fontWeight:'bold', cursor:'pointer', border:'none'}}>{loading?'Loading...':'Login →'}</button>
-        <button type="button" onClick={googleLogin} style={{width:'100%', background:'white', color:'#222', border:'1px solid #ddd', padding:14, borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center', gap:12, fontWeight:600, cursor:'pointer'}}>Continue with Google</button>
+        <div style={{display:'flex', alignItems:'center', gap:10}}><div style={{flex:1, height:1, background:'#ddd'}}></div><span style={{color:'#888', fontSize:13}}>OR</span><div style={{flex:1, height:1, background:'#ddd'}}></div></div>
+        <button type="button" onClick={googleLogin} style={{width:'100%', background:'white', color:'#222', border:'1px solid #ddd', padding:14, borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center', gap:12, fontWeight:600, cursor:'pointer', fontSize:15}}>
+          <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="google" style={{width:22, height:22}} /> Continue with Google
+        </button>
         <p style={{textAlign:'center', fontSize:14}}>No account? <Link to="/register" style={{color:'#0AA', fontWeight:'bold'}}>Register</Link></p>
       </form>
     </div>
   );
 }
 
+// === REGISTER WITH GOOGLE LOGO ===
 function Register(){
   const [form,setForm]=useState({firstName:'',lastName:'',gender:'Male',country:'Nigeria',phone:'',email:'',password:''});
   const [error,setError]=useState(''); const [loading,setLoading]=useState(false); const nav=useNavigate();
@@ -315,7 +314,11 @@ function Register(){
         {form.password && (<div style={{fontSize:12, background:'#f9f9f9', padding:10, borderRadius:8}}><div style={{color: strength.length ? 'green' : 'red'}}>{strength.length ? '✅' : '❌'} 8+ chars</div><div style={{color: strength.upper ? 'green' : 'red'}}>{strength.upper ? '✅' : '❌'} Uppercase</div><div style={{color: strength.lower ? 'green' : 'red'}}>{strength.lower ? '✅' : '❌'} lowercase</div><div style={{color: strength.number ? 'green' : 'red'}}>{strength.number ? '✅' : '❌'} Number</div><div style={{color: strength.special ? 'green' : 'red'}}>{strength.special ? '✅' : '❌'} Special !@#$%</div></div>)}
         {error && <p style={{color:'red', fontSize:13, textAlign:'center', background:'#ffe0e0', padding:8, borderRadius:6}}>{error}</p>}
         <button type="submit" disabled={loading} style={{background:'black', color:'white', padding:16, borderRadius:12, fontWeight:'bold', fontSize:16, border:'none', cursor:'pointer'}}>{loading ? 'Creating Account...' : 'Create Account'}</button>
-        <button type="button" onClick={googleLogin} style={{width:'100%', background:'white', color:'#444', border:'1px solid #ddd', padding:14, borderRadius:12, fontWeight:600, cursor:'pointer'}}>Continue with Google</button>
+        <div style={{display:'flex', alignItems:'center', gap:10}}><div style={{flex:1, height:1, background:'#ddd'}}></div><span style={{color:'#888', fontSize:13}}>OR</span><div style={{flex:1, height:1, background:'#ddd'}}></div></div>
+        <button type="button" onClick={googleLogin} style={{width:'100%', background:'white', color:'#444', border:'1px solid #ddd', padding:14, borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center', gap:12, fontWeight:600, cursor:'pointer', fontSize:15}}>
+          <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="google" style={{width:22, height:22}} /> Continue with Google
+        </button>
+        <p style={{textAlign:'center', fontSize:14}}>Already have account? <Link to="/login" style={{color:'#0AA', fontWeight:'bold'}}>Login</Link></p>
       </form>
     </div>
   )
@@ -332,13 +335,11 @@ function Cart(){
     return acc;
   },{}));
   const total = grouped.reduce((s,i)=>s+ (Number(i.price)*i.qty),0);
-
   useEffect(()=>{
     if(!document.querySelector('script[src="https://js.paystack.co/v1/inline.js"]')){
       const s=document.createElement('script'); s.src='https://js.paystack.co/v1/inline.js'; document.body.appendChild(s);
     }
   },[]);
-  
   const payWithPaystack = () => {
     if(total <=0) return alert('Cart empty');
     if(!fullName || !address || !phone) return alert('Please fill Full Name, Address, Phone');
@@ -358,7 +359,6 @@ function Cart(){
     });
     handler.openIframe();
   };
-
   return (
     <div style={{padding:20, maxWidth:700, margin:'0 auto'}}>
       <h2>Cart ({grouped.length} types, {cart.length} items) - ${total}</h2>
@@ -371,7 +371,6 @@ function Cart(){
           <button onClick={()=>remove(c._id)} style={{background:'#ffe0e0', border:'none', borderRadius:6, padding:'4px 10px', cursor:'pointer'}}>x</button>
         </div>
       </div>)}
-      
       {grouped.length>0 && (
         <div style={{background:'white', padding:16, borderRadius:12, marginTop:20}}>
           <h3>🚚 Delivery Details (Required)</h3>
@@ -426,14 +425,12 @@ function Admin(){
     fetch(`${API}/api/products`).then(r=>r.json()).then(d=>Array.isArray(d)?setProducts(d):setProducts([])).catch(()=>setProducts([]));
   };
   useEffect(()=>{ fetchAll(); },[]);
-
   const handleFileUpload = async (e) => {
     const files = Array.from(e.target.files); if(!files.length) return;
     if(files.length + images.length > 5) return alert('Max 5 images total');
     for(let f of files){ if(f.size > 2*1024*1024) return alert(`${f.name} too big - Max 2MB`); }
     setUploading(true);
     try{
-      // Try multiple endpoint first, fallback to single uploads
       let uploaded = [];
       const fd = new FormData();
       files.forEach(f=>fd.append('images', f));
@@ -441,9 +438,7 @@ function Admin(){
       if(res.ok){
         const data = await res.json();
         if(data.paths) uploaded = data.paths.map(p=> p.startsWith('http') ? p : `${API}${p}`);
-        else if(data.path) uploaded = [`${API}${data.path}`];
       } else {
-        // fallback: upload one by one to /api/upload
         for(let f of files){
           const fd2 = new FormData(); fd2.append('image', f);
           const r2 = await fetch(`${API}/api/upload`,{method:'POST',headers:{'x-auth-token':localStorage.getItem('token')},body:fd2});
@@ -454,11 +449,10 @@ function Admin(){
       if(uploaded.length){
         setImages(prev=>[...prev, ...uploaded].slice(0,5));
         alert(`${uploaded.length} images uploaded ✅`);
-      } else alert('Upload failed - check server.js has /api/upload-multiple route');
-    }catch{ alert('Upload error - make sure server.js updated'); }
+      } else alert('Upload failed - check server.js');
+    }catch{ alert('Upload error'); }
     setUploading(false);
   };
-
   const addProduct=async(e)=>{
     e.preventDefault(); 
     if(images.length===0) return alert('Upload at least 1 image');
@@ -490,13 +484,11 @@ function Admin(){
         <h3 style={{textAlign:'center'}}>Add Product - Multi Image (Max 5)</h3>
         <div style={{display:'flex', gap:10, marginBottom:10}}><input value={name} onChange={e=>setName(e.target.value)} placeholder="Product Name" required style={{flex:2, padding:12, borderRadius:8, border:'1px solid #ccc'}}/><select value={category} onChange={e=>setCategory(e.target.value)} style={{flex:1, padding:12, borderRadius:8}}><option>phones</option><option>laptops</option><option>shirts</option><option>watches</option><option>headphones</option><option>gaming</option><option>accessories</option></select></div>
         <div style={{display:'flex', gap:10, marginBottom:10}}><input value={desc} onChange={e=>setDesc(e.target.value)} placeholder="Description" required style={{flex:2, padding:12, borderRadius:8, border:'1px solid #ccc'}}/><input value={price} onChange={e=>setPrice(e.target.value)} placeholder="Price $" type="number" required style={{flex:1, padding:12, borderRadius:8, border:'1px solid #ccc'}}/></div>
-        
         <div style={{background:'#eef6ff', padding:14, borderRadius:10, border:'2px dashed #0AA', textAlign:'center', marginBottom:10}}>
           <label style={{fontWeight:'bold', display:'block', marginBottom:8}}>📁 Upload 1-5 Images - Select multiple at once</label>
           <input type="file" multiple accept="image/jpeg,image/png,image/webp" onChange={handleFileUpload}/>
           {uploading && <p style={{color:'#0AA', fontWeight:'bold'}}>Uploading... please wait</p>}
         </div>
-        
         {images.length>0 && (
           <div style={{display:'flex', gap:8, flexWrap:'wrap', marginBottom:12, background:'#f9f9f9', padding:10, borderRadius:8}}>
             {images.map((img,i)=>(
@@ -508,23 +500,20 @@ function Admin(){
             ))}
           </div>
         )}
-
         <button type="submit" style={{width:'100%', padding:14, background:'black', color:'white', borderRadius:10, fontWeight:'bold', border:'none', cursor:'pointer'}}>➕ Add Product with {images.length} Images</button>
       </form>
-
-      <h3>🛒 Products - Showing image count</h3>
+      <h3>🛒 Products</h3>
       <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:12, marginBottom:30}}>
         {products.map(p=>(
           <div key={p._id} style={{border:'1px solid #ddd', padding:10, borderRadius:10, background:'white'}}>
             <img src={resolveImg(getFirstImage(p))} style={{width:'100%', height:120, objectFit:'cover', borderRadius:8}} alt=""/>
             <p style={{margin:'6px 0 2px 0', fontWeight:'bold', fontSize:13}}>{sanitize(p.name)} {getAllImages(p).length>1 && <span style={{background:'black', color:'white', fontSize:10, padding:'2px 5px', borderRadius:4}}>{getAllImages(p).length} imgs</span>}</p>
-            <p style={{margin:0, fontSize:12}}>${p.price} - {p.category}</p>
+            <p style={{margin:0, fontSize:12}}>${p.price}</p>
             <button onClick={()=>deleteProduct(p._id, p.name)} style={{width:'100%', marginTop:6, background:'#FF4444', color:'white', padding:6, borderRadius:6, border:'none', cursor:'pointer'}}>🗑️ Delete</button>
           </div>
         ))}
       </div>
-
-      <h3>📦 All Orders - Update Status</h3>
+      <h3>📦 Orders</h3>
       <div style={{display:'grid', gap:8}}>
         {orders.map(o=>(
           <div key={o._id} style={{border:'1px solid #ddd', padding:12, borderRadius:8, background:'white'}}>
@@ -547,19 +536,11 @@ export default function App(){
   const [user,setUser]=useState(()=>{ try{ const u=JSON.parse(localStorage.getItem('user')); return u && u.email ? u : null }catch{return null} });
   const [cart,setCart]=useState([]);
   const [wishlist,setWishlist]=useState(()=>{ try{return JSON.parse(localStorage.getItem('wishlist')||'[]')}catch{return []} });
-  
   const addToCart=(p)=>{ setCart([...cart,p]); };
   const remove=(id)=>{ setCart(cart.filter(c=>c._id!==id)); };
   const updateQty=(id, delta)=>{
-    if(delta===1){ 
-      const item = cart.find(c=>c._id===id) || { _id:id };
-      // find original product data to copy price etc - use cart item
-      const real = cart.find(c=>c._id===id);
-      setCart([...cart, real || item]); 
-      return; 
-    }
-    let found=false;
-    let newCart=[];
+    if(delta===1){ const real = cart.find(c=>c._id===id); setCart([...cart, real || { _id:id }]); return; }
+    let found=false; let newCart=[];
     for(let item of cart){ if(!found && item._id===id){ found=true; continue; } newCart.push(item); }
     setCart(newCart);
   };
@@ -571,10 +552,8 @@ export default function App(){
     localStorage.setItem('wishlist', JSON.stringify(newList));
   };
   useEffect(()=>{ localStorage.setItem('wishlist', JSON.stringify(wishlist)); },[wishlist]);
-  
   const isAdmin = user?.isAdmin === true;
   useEffect(()=>{ const script = document.createElement('script'); script.src = 'https://js.paystack.co/v1/inline.js'; document.body.appendChild(script); },[]);
-  
   return (
     <AuthContext.Provider value={{user,setUser}}><CartContext.Provider value={{cart,addToCart,remove,clearCart,updateQty}}><WishlistContext.Provider value={{wishlist,toggleWishlist}}>
       <BrowserRouter>
