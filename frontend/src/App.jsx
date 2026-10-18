@@ -49,20 +49,20 @@ function Store(){
   return (
     <div style={{padding:20}}>
       <div style={{display:'flex', gap:10, marginBottom:20, flexWrap:'wrap'}}>
-        <input value={search} onChange={e=>setSearch(e.target.value.slice(0,50))} placeholder="🔍 Search" style={{padding:10, width:300, borderRadius:8, border:'1px solid #ccc'}} maxLength={50}/>
-        <select value={category} onChange={e=>setCategory(e.target.value)} style={{padding:10, borderRadius:8}}>
+        <input value={search} onChange={e=>setSearch(e.target.value.slice(0,50))} placeholder="🔍 Search" style={{padding:12, width:300, borderRadius:10, border:'1px solid #ccc', fontSize:16}} maxLength={50}/>
+        <select value={category} onChange={e=>setCategory(e.target.value)} style={{padding:12, borderRadius:10, fontSize:16}}>
           {categories.map(c=><option key={c} value={c}>{c}</option>)}
         </select>
       </div>
-      <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:15}}>
+      <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))', gap:18}}>
         {products.map(p=>(
-          <div key={p._id} style={{border:'1px solid #ddd', padding:12, borderRadius:12, background:'white'}}>
-            <img src={p.image?.startsWith('/uploads') ? `${API}${p.image}` : (p.image?.startsWith('https://') ? p.image : '')} onError={(e)=> e.target.style.display='none'} style={{width:'100%', height:180, objectFit:'cover', borderRadius:8}} alt={sanitize(p.name)} />
-            <span style={{fontSize:11, background:'#eee', padding:'2px 6px', borderRadius:4}}>{sanitize(p.category)}</span>
-            <h3 style={{margin:'6px 0'}}>{sanitize(p.name)}</h3>
+          <div key={p._id} style={{border:'1px solid #ddd', padding:14, borderRadius:14, background:'white', boxShadow:'0 2px 8px rgba(0,0,0,0.06)'}}>
+            <img src={p.image?.startsWith('/uploads') ? `${API}${p.image}` : (p.image?.startsWith('https://') ? p.image : '')} onError={(e)=> e.target.style.display='none'} style={{width:'100%', height:180, objectFit:'cover', borderRadius:10}} alt={sanitize(p.name)} />
+            <span style={{fontSize:11, background:'#eee', padding:'3px 8px', borderRadius:6}}>{sanitize(p.category)}</span>
+            <h3 style={{margin:'8px 0'}}>{sanitize(p.name)}</h3>
             <p style={{fontSize:13, color:'#555', minHeight:40}}>{sanitize(p.description) || 'No description'}</p>
-            <p><b>${Number(p.price) || 0}</b></p>
-            <button onClick={()=>addToCart(p)} style={{width:'100%', padding:8, background:'black', color:'white', borderRadius:6, cursor:'pointer'}}>Add to Cart</button>
+            <p style={{fontSize:18}}><b>${Number(p.price) || 0}</b></p>
+            <button onClick={()=>addToCart(p)} style={{width:'100%', padding:12, background:'black', color:'white', borderRadius:8, cursor:'pointer', fontSize:15, fontWeight:'bold'}}>Add to Cart</button>
           </div>
         ))}
       </div>
@@ -70,6 +70,7 @@ function Store(){
   );
 }
 
+// ===== NEW BIG LOGIN =====
 function Login(){
   const [email,setEmail]=useState(''); const [pass,setPass]=useState('');
   const [loading,setLoading]=useState(false); const [attempts,setAttempts]=useState(0);
@@ -96,16 +97,28 @@ function Login(){
     } catch { alert('Google login failed'); }
   };
   return (
-    <form onSubmit={submit} style={{maxWidth:400, margin:'30px auto', padding:20, border:'1px solid #ddd', borderRadius:12, display:'flex', flexDirection:'column', gap:10, background:'white'}}>
-      <h2>Login</h2>
-      <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="email" required type="email"/>
-      <input type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="password" required/>
-      <button disabled={loading}>{loading?'Loading...':'Login'}</button>
-      <div style={{textAlign:'center', color:'#888', fontSize:13}}>OR</div>
-      <button type="button" onClick={googleLogin} style={{width:'100%', background:'white', color:'#444', border:'1px solid #ccc', padding:'10px', borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', gap:10, fontWeight:600, cursor:'pointer'}}>
-        <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="google" style={{width:20, height:20}} /> Continue with Google
-      </button>
-    </form>
+    <div style={{minHeight:'80vh', display:'flex', alignItems:'center', justifyContent:'center', padding:20, background:'#f5f7fb'}}>
+      <form onSubmit={submit} style={{width:'100%', maxWidth:480, background:'white', padding:40, borderRadius:20, boxShadow:'0 10px 30px rgba(0,0,0,0.1)', display:'flex', flexDirection:'column', gap:16}}>
+        <h2 style={{fontSize:32, textAlign:'center', margin:0}}>Welcome back 👋</h2>
+        <p style={{textAlign:'center', color:'#666', marginTop:-10}}>Login to EsosaTech</p>
+        <div style={{display:'flex', flexDirection:'column', gap:6}}>
+          <label style={{fontWeight:'600', fontSize:14}}>Email</label>
+          <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" required type="email" style={{padding:16, borderRadius:12, border:'1px solid #ddd', fontSize:16}}/>
+        </div>
+        <div style={{display:'flex', flexDirection:'column', gap:6}}>
+          <label style={{fontWeight:'600', fontSize:14}}>Password</label>
+          <input type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="••••••••" required style={{padding:16, borderRadius:12, border:'1px solid #ddd', fontSize:16}}/>
+        </div>
+        <button disabled={loading} style={{padding:16, background:'black', color:'white', borderRadius:12, fontSize:16, fontWeight:'bold', cursor:'pointer', border:'none', marginTop:8}}>{loading?'Loading...':'Login →'}</button>
+        <div style={{display:'flex', alignItems:'center', gap:10, margin:'4px 0'}}>
+          <div style={{flex:1, height:1, background:'#ddd'}}></div><span style={{color:'#888', fontSize:13}}>OR</span><div style={{flex:1, height:1, background:'#ddd'}}></div>
+        </div>
+        <button type="button" onClick={googleLogin} style={{width:'100%', background:'white', color:'#222', border:'1px solid #ddd', padding:14, borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center', gap:12, fontWeight:600, cursor:'pointer', fontSize:15}}>
+          <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="google" style={{width:22, height:22}} /> Continue with Google
+        </button>
+        <p style={{textAlign:'center', fontSize:14, marginTop:8}}>No account? <Link to="/register" style={{color:'#0AA', fontWeight:'bold'}}>Register</Link></p>
+      </form>
+    </div>
   );
 }
 
@@ -137,32 +150,35 @@ function Register(){
     } catch { alert('Google login failed'); }
   };
   return (
-    <form onSubmit={submit} style={{maxWidth:420, margin:'20px auto', padding:20, border:'1px solid #ddd', borderRadius:12, display:'flex', flexDirection:'column', gap:8, background:'white'}}>
-      <h2>Create Account</h2>
-      <div style={{display:'flex', gap:8}}><input value={form.firstName} onChange={e=>handle('firstName',e.target.value)} placeholder="First Name" required/><input value={form.lastName} onChange={e=>handle('lastName',e.target.value)} placeholder="Last Name" required/></div>
-      <div style={{display:'flex', gap:8}}>
-        <select value={form.gender} onChange={e=>handle('gender',e.target.value)} style={{flex:1, padding:8}}><option>Male</option><option>Female</option><option>Other</option></select>
-        <input value={form.country} onChange={e=>handle('country',e.target.value)} placeholder="Country" required style={{flex:1}}/>
-      </div>
-      <input value={form.phone} onChange={e=>handle('phone',e.target.value)} placeholder="Phone" required/>
-      <input value={form.email} onChange={e=>handle('email',e.target.value)} placeholder="Email" required type="email"/>
-      <input type="password" value={form.password} onChange={e=>handle('password',e.target.value)} placeholder="Password" required/>
-      {form.password && (
-        <div style={{fontSize:'12px'}}>
-          <div style={{color: strength.length ? 'green' : 'red'}}>{strength.length ? '✅' : '❌'} 8+ chars</div>
-          <div style={{color: strength.upper ? 'green' : 'red'}}>{strength.upper ? '✅' : '❌'} Uppercase</div>
-          <div style={{color: strength.lower ? 'green' : 'red'}}>{strength.lower ? '✅' : '❌'} lowercase</div>
-          <div style={{color: strength.number ? 'green' : 'red'}}>{strength.number ? '✅' : '❌'} Number</div>
-          <div style={{color: strength.special ? 'green' : 'red'}}>{strength.special ? '✅' : '❌'} Special !@#$%</div>
+    <div style={{minHeight:'90vh', display:'flex', alignItems:'center', justifyContent:'center', padding:20, background:'#f5f7fb'}}>
+      <form onSubmit={submit} style={{width:'100%', maxWidth:520, background:'white', padding:36, borderRadius:20, boxShadow:'0 10px 30px rgba(0,0,0,0.1)', display:'flex', flexDirection:'column', gap:12}}>
+        <h2 style={{fontSize:30, textAlign:'center', margin:0}}>Create Account</h2>
+        <p style={{textAlign:'center', color:'#666', marginTop:-8, marginBottom:8}}>Join EsosaTech today</p>
+        <div style={{display:'flex', gap:10}}><input value={form.firstName} onChange={e=>handle('firstName',e.target.value)} placeholder="First Name" required style={{flex:1, padding:14, borderRadius:10, border:'1px solid #ddd', fontSize:15}}/><input value={form.lastName} onChange={e=>handle('lastName',e.target.value)} placeholder="Last Name" required style={{flex:1, padding:14, borderRadius:10, border:'1px solid #ddd', fontSize:15}}/></div>
+        <div style={{display:'flex', gap:10}}>
+          <select value={form.gender} onChange={e=>handle('gender',e.target.value)} style={{flex:1, padding:14, borderRadius:10, border:'1px solid #ddd'}}><option>Male</option><option>Female</option><option>Other</option></select>
+          <input value={form.country} onChange={e=>handle('country',e.target.value)} placeholder="Country" required style={{flex:1, padding:14, borderRadius:10, border:'1px solid #ddd', fontSize:15}}/>
         </div>
-      )}
-      {error && <p style={{color:'red', fontSize:13}}>{error}</p>}
-      <button disabled={!isStrong || loading} style={{opacity: isStrong ? 1 : 0.5, background: isStrong ? 'black' : '#888', color:'white', padding:10, borderRadius:6}}>{loading?'Creating...': isStrong ? 'Register ✅' : 'Weak Password ❌'}</button>
-      <div style={{textAlign:'center', color:'#888', fontSize:13, marginTop:5}}>OR</div>
-      <button type="button" onClick={googleLogin} style={{width:'100%', background:'white', color:'#444', border:'1px solid #ccc', padding:'10px', borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', gap:10, fontWeight:600, cursor:'pointer'}}>
-        <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="google" style={{width:20, height:20}} /> Continue with Google
-      </button>
-    </form>
+        <input value={form.phone} onChange={e=>handle('phone',e.target.value)} placeholder="Phone" required style={{padding:14, borderRadius:10, border:'1px solid #ddd', fontSize:15}}/>
+        <input value={form.email} onChange={e=>handle('email',e.target.value)} placeholder="Email" required type="email" style={{padding:14, borderRadius:10, border:'1px solid #ddd', fontSize:15}}/>
+        <input type="password" value={form.password} onChange={e=>handle('password',e.target.value)} placeholder="Password" required style={{padding:14, borderRadius:10, border:'1px solid #ddd', fontSize:15}}/>
+        {form.password && (
+          <div style={{fontSize:'13px', background:'#f9f9f9', padding:10, borderRadius:8}}>
+            <div style={{color: strength.length ? 'green' : 'red'}}>{strength.length ? '✅' : '❌'} 8+ chars</div>
+            <div style={{color: strength.upper ? 'green' : 'red'}}>{strength.upper ? '✅' : '❌'} Uppercase</div>
+            <div style={{color: strength.lower ? 'green' : 'red'}}>{strength.lower ? '✅' : '❌'} lowercase</div>
+            <div style={{color: strength.number ? 'green' : 'red'}}>{strength.number ? '✅' : '❌'} Number</div>
+            <div style={{color: strength.special ? 'green' : 'red'}}>{strength.special ? '✅' : '❌'} Special !@#$%</div>
+          </div>
+        )}
+        {error && <p style={{color:'red', fontSize:13, textAlign:'center'}}>{error}</p>}
+        <button disabled={!isStrong || loading} style={{opacity: isStrong ? 1 : 0.5, background: isStrong ? 'black' : '#888', color:'white', padding:16, borderRadius:12, fontWeight:'bold', fontSize:16, border:'none', cursor:'pointer'}}>{loading?'Creating...': isStrong ? 'Register ✅' : 'Weak Password ❌'}</button>
+        <div style={{display:'flex', alignItems:'center', gap:10}}><div style={{flex:1, height:1, background:'#ddd'}}></div><span style={{color:'#888', fontSize:13}}>OR</span><div style={{flex:1, height:1, background:'#ddd'}}></div></div>
+        <button type="button" onClick={googleLogin} style={{width:'100%', background:'white', color:'#444', border:'1px solid #ddd', padding:14, borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center', gap:12, fontWeight:600, cursor:'pointer', fontSize:15}}>
+          <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="google" style={{width:22, height:22}} /> Continue with Google
+        </button>
+      </form>
+    </div>
   )
 }
 
@@ -195,10 +211,10 @@ function Cart(){
     handler.openIframe();
   };
   return (
-    <div style={{padding:20}}>
+    <div style={{padding:20, maxWidth:600, margin:'0 auto'}}>
       <h2>Cart - ${total}</h2>
-      {cart.map((c,i)=><div key={i} style={{display:'flex', justifyContent:'space-between', borderBottom:'1px solid #eee', padding:8, background:'white', marginBottom:4, borderRadius:6}}><span>{sanitize(c.name)} - ${Number(c.price)||0}</span><button onClick={()=>remove(i)}>x</button></div>)}
-      {cart.length>0 ? <><button onClick={payWithPaystack} style={{marginTop:20, padding:12, background:'#0AA', color:'white', width:'100%', borderRadius:8, fontSize:16, cursor:'pointer', border:'none'}}>💳 Pay with Paystack - ${total}</button><p style={{fontSize:12, color:'#666'}}>Test card: 4084084084084081</p></> : <p>Cart empty</p>}
+      {cart.map((c,i)=><div key={i} style={{display:'flex', justifyContent:'space-between', borderBottom:'1px solid #eee', padding:12, background:'white', marginBottom:6, borderRadius:8}}><span>{sanitize(c.name)} - ${Number(c.price)||0}</span><button onClick={()=>remove(i)} style={{background:'#eee', border:'none', borderRadius:6, padding:'4px 10px', cursor:'pointer'}}>x</button></div>)}
+      {cart.length>0 ? <><button onClick={payWithPaystack} style={{marginTop:20, padding:16, background:'#0AA', color:'white', width:'100%', borderRadius:12, fontSize:18, fontWeight:'bold', cursor:'pointer', border:'none'}}>💳 Pay with Paystack - ${total}</button><p style={{fontSize:12, color:'#666', textAlign:'center'}}>Test card: 4084084084084081</p></> : <p>Cart empty</p>}
     </div>
   )
 }
@@ -207,7 +223,7 @@ function MyOrders(){
   const [orders,setOrders]=useState([]);
   const nav=useNavigate();
   useEffect(()=>{ fetch(`${API}/api/orders/my`,{headers:{'x-auth-token':localStorage.getItem('token')}}).then(r=>r.json()).then(d=> Array.isArray(d)? setOrders(d): setOrders([])).catch(()=> setOrders([])); },[]);
-  return <div style={{padding:20}}><h2>My Orders</h2>{orders.map(o=><div key={o._id} onClick={()=>nav(`/order/${o._id}`)} style={{border:'1px solid #ddd', padding:12, marginBottom:8, borderRadius:8, background:'white', cursor:'pointer'}}><b>{Number(o.total)||0}$</b> - {sanitize(o.status)} - {o.items?.length || 0} items<br/><small>Ref: {sanitize(o.paystackRef)} - Click for details 👁️</small></div>)}{orders.length===0 && <p>No orders yet</p>}</div>
+  return <div style={{padding:20, maxWidth:700, margin:'0 auto'}}><h2>My Orders</h2>{orders.map(o=><div key={o._id} onClick={()=>nav(`/order/${o._id}`)} style={{border:'1px solid #ddd', padding:16, marginBottom:10, borderRadius:12, background:'white', cursor:'pointer', boxShadow:'0 2px 6px rgba(0,0,0,0.05)'}}><b>{Number(o.total)||0}$</b> - {sanitize(o.status)} - {o.items?.length || 0} items<br/><small>Ref: {sanitize(o.paystackRef)} - Click for details 👁️</small></div>)}{orders.length===0 && <p>No orders yet</p>}</div>
 }
 
 function OrderDetails(){
@@ -220,33 +236,30 @@ function OrderDetails(){
   return (
     <div style={{padding:20, maxWidth:600, margin:'0 auto'}}>
       <h2>Order Details</h2>
-      <div style={{border:'2px solid #0AA', padding:15, borderRadius:12, background:'white'}}>
+      <div style={{border:'2px solid #0AA', padding:20, borderRadius:14, background:'white'}}>
         <p><b>Order ID:</b> {order._id}</p>
         <p><b>Ref:</b> {sanitize(order.paystackRef)}</p>
-        <p><b>Status:</b> <span style={{background: order.status==='Paid' ? 'lightgreen' : '#eee', padding:'2px 8px', borderRadius:4}}>{order.status}</span></p>
+        <p><b>Status:</b> <span style={{background: order.status==='Paid' ? 'lightgreen' : '#eee', padding:'4px 10px', borderRadius:6}}>{order.status}</span></p>
         <p><b>Total:</b> ${order.total}</p>
         <p><b>Email:</b> {order.email || order.userEmail}</p>
         <p><b>Date:</b> {new Date(order.createdAt).toLocaleString()}</p>
         <h3>Items ({order.items?.length}):</h3>
-        {order.items?.map((it,i)=><div key={i} style={{display:'flex', justifyContent:'space-between', padding:8, borderBottom:'1px solid #eee'}}><span>{sanitize(it.name)}</span><b>${it.price}</b></div>)}
+        {order.items?.map((it,i)=><div key={i} style={{display:'flex', justifyContent:'space-between', padding:10, borderBottom:'1px solid #eee'}}><span>{sanitize(it.name)}</span><b>${it.price}</b></div>)}
       </div>
-      <Link to="/myorders" style={{display:'inline-block', marginTop:15, color:'#0AA'}}>← Back to My Orders</Link>
+      <Link to="/myorders" style={{display:'inline-block', marginTop:15, color:'#0AA', fontWeight:'bold'}}>← Back to My Orders</Link>
     </div>
   )
 }
 
-// ===== FIXED BIG FORM - THIS IS THE NEW CODE =====
 function Admin(){
   const [orders,setOrders]=useState([]); 
   const [products,setProducts]=useState([]);
   const [name,setName]=useState(''); const [price,setPrice]=useState(''); const [image,setImage]=useState(''); const [category,setCategory]=useState('phones'); const [desc,setDesc]=useState(''); const [uploading,setUploading]=useState(false);
-
   const fetchAll = ()=>{
     fetch(`${API}/api/orders/all`,{headers:{'x-auth-token':localStorage.getItem('token')}}).then(r=>r.json()).then(d=>Array.isArray(d)?setOrders(d):setOrders([])).catch(()=>setOrders([]));
     fetch(`${API}/api/products`).then(r=>r.json()).then(d=>Array.isArray(d)?setProducts(d):setProducts([])).catch(()=>setProducts([]));
   };
   useEffect(()=>{ fetchAll(); },[]);
-
   const handleFileUpload = async (e) => {
     const f = e.target.files[0]; if(!f) return;
     if(f.size > 2*1024*1024) return alert('Max 2MB');
@@ -255,7 +268,6 @@ function Admin(){
     try{ const res = await fetch(`${API}/api/upload`,{method:'POST',headers:{'x-auth-token':localStorage.getItem('token')},body:fd}); const data = await res.json(); if(data.path){ setImage(`${API}${data.path}`); alert('Uploaded ✅'); } else alert(data.msg || 'Upload failed'); }catch{ alert('Upload error') }
     setUploading(false);
   };
-
   const addProduct=async(e)=>{
     e.preventDefault(); 
     if(!image) return alert('Upload image first');
@@ -265,7 +277,6 @@ function Admin(){
       if(data._id){ alert('Product Added ✅'); setName('');setPrice('');setImage('');setDesc(''); fetchAll(); } else alert(data.msg || 'Failed');
     } catch { alert('Add failed'); }
   };
-
   const deleteProduct = async (id, productName)=>{
     if(!confirm(`Delete ${productName}?`)) return;
     try {
@@ -273,7 +284,6 @@ function Admin(){
       if(res.ok){ alert('Deleted ✅'); setProducts(products.filter(p=>p._id!==id)); } else alert('Delete failed');
     } catch { alert('Delete error'); }
   };
-
   const deleteOrder = async (id)=>{
     if(!confirm('Delete this order?')) return;
     try {
@@ -281,59 +291,46 @@ function Admin(){
       if(res.ok){ alert('Order deleted ✅'); setOrders(orders.filter(o=>o._id!==id)); } else alert('Delete failed');
     } catch { alert('Delete error'); }
   };
-
   const totalSales = orders.reduce((s,o)=>s+ (Number(o.total) || 0),0);
   return (
     <div style={{padding:20}}>
       <h2 style={{textAlign:'center', marginBottom:20}}>Admin - Orders ({orders.length}) - Sales ${totalSales} - Products ({products.length})</h2>
-      
-      {/* BIG FORM - FITS NOW */}
       <form onSubmit={addProduct} style={{border:'2px solid #222', padding:28, maxWidth:700, margin:'0 auto 35px auto', borderRadius:18, background:'white', boxShadow:'0 6px 20px rgba(0,0,0,0.1)'}}>
         <h3 style={{textAlign:'center', marginBottom:22, fontSize:26}}>Add Product</h3>
-        
         <div style={{display:'flex', gap:12, marginBottom:14, flexWrap:'wrap'}}>
           <input value={name} onChange={e=>setName(e.target.value)} placeholder="Product Name" required style={{flex:2, minWidth:200, padding:14, borderRadius:10, border:'1px solid #ccc', fontSize:16}}/>
           <select value={category} onChange={e=>setCategory(e.target.value)} style={{flex:1, minWidth:130, padding:14, borderRadius:10, border:'1px solid #ccc', fontSize:15}}><option value="phones">phones</option><option value="laptops">laptops</option><option value="shirts">shirts</option><option value="watches">watches</option><option value="headphones">headphones</option><option value="gaming">gaming</option><option value="accessories">accessories</option></select>
         </div>
-
         <div style={{display:'flex', gap:12, marginBottom:14, flexWrap:'wrap'}}>
-          <input value={desc} onChange={e=>setDesc(e.target.value)} placeholder="Description - what is this product?" required style={{flex:2, minWidth:200, padding:14, borderRadius:10, border:'1px solid #ccc', fontSize:15}}/>
+          <input value={desc} onChange={e=>setDesc(e.target.value)} placeholder="Description" required style={{flex:2, minWidth:200, padding:14, borderRadius:10, border:'1px solid #ccc', fontSize:15}}/>
           <input value={price} onChange={e=>setPrice(e.target.value)} placeholder="Price $" type="number" required style={{flex:1, minWidth:120, padding:14, borderRadius:10, border:'1px solid #ccc', fontSize:15}}/>
         </div>
-
         <div style={{background:'#eef6ff', padding:18, margin:'18px 0', borderRadius:12, border:'2px dashed #0AA', textAlign:'center'}}>
-          <label style={{fontWeight:'bold', display:'block', marginBottom:10, fontSize:16}}>📁 Upload Product Image (Max 2MB - JPG / PNG / WEBP)</label>
-          <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFileUpload} style={{fontSize:14}}/>
-          {uploading && <p style={{color:'#0AA', fontWeight:'bold', marginTop:8}}>Uploading... wait</p>}
+          <label style={{fontWeight:'bold', display:'block', marginBottom:10}}>📁 Upload Image (Max 2MB)</label>
+          <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFileUpload}/>
+          {uploading && <p style={{color:'#0AA', fontWeight:'bold', marginTop:8}}>Uploading...</p>}
         </div>
-
-        <input value={image} onChange={e=>setImage(e.target.value)} placeholder="Image URL will appear here after upload, or paste https:// link" style={{width:'100%', padding:14, borderRadius:10, border:'1px solid #ccc', fontSize:14, marginBottom:14, boxSizing:'border-box'}}/>
+        <input value={image} onChange={e=>setImage(e.target.value)} placeholder="Image URL" style={{width:'100%', padding:14, borderRadius:10, border:'1px solid #ccc', fontSize:14, marginBottom:14, boxSizing:'border-box'}}/>
         {image && <img src={image} alt="preview" style={{width:'100%', maxHeight:220, objectFit:'contain', marginBottom:14, borderRadius:10, border:'1px solid #eee'}}/>}
-        
-        <button type="submit" style={{width:'100%', padding:16, background:'black', color:'white', borderRadius:12, fontSize:18, fontWeight:'bold', cursor:'pointer', border:'none'}}>➕ Add Product to Store</button>
+        <button type="submit" style={{width:'100%', padding:16, background:'black', color:'white', borderRadius:12, fontSize:18, fontWeight:'bold', cursor:'pointer', border:'none'}}>➕ Add Product</button>
       </form>
-
-      <h3 style={{marginBottom:15}}>🛒 All Products - Click 🗑️ to Delete ({products.length})</h3>
+      <h3>🛒 All Products ({products.length})</h3>
       <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:12, marginBottom:30}}>
         {products.map(p=>(
           <div key={p._id} style={{border:'1px solid #ddd', padding:10, borderRadius:10, background:'white'}}>
             <img src={p.image?.startsWith('/uploads') ? `${API}${p.image}` : p.image} style={{width:'100%', height:130, objectFit:'cover', borderRadius:8}} alt=""/>
-            <p style={{margin:'8px 0 4px 0', fontWeight:'bold', fontSize:14}}>{sanitize(p.name)}</p>
-            <p style={{margin:0, fontSize:13}}>${p.price} - {p.category}</p>
-            <button onClick={()=>deleteProduct(p._id, p.name)} style={{width:'100%', marginTop:8, background:'#FF4444', color:'white', padding:8, borderRadius:6, border:'none', cursor:'pointer', fontWeight:'bold'}}>🗑️ Delete Product</button>
+            <p style={{margin:'8px 0 4px 0', fontWeight:'bold'}}>{sanitize(p.name)}</p>
+            <p style={{margin:0}}>${p.price} - {p.category}</p>
+            <button onClick={()=>deleteProduct(p._id, p.name)} style={{width:'100%', marginTop:8, background:'#FF4444', color:'white', padding:8, borderRadius:6, border:'none', cursor:'pointer'}}>🗑️ Delete</button>
           </div>
         ))}
       </div>
-
-      <h3>📦 All Orders ({orders.length})</h3>
+      <h3>📦 All Orders</h3>
       <div style={{display:'grid', gap:8}}>
         {orders.map(o=>(
           <div key={o._id} style={{border:'1px solid #ddd', padding:12, borderRadius:8, background:'white', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-            <div>
-              <Link to={`/order/${o._id}`} style={{fontWeight:'bold', color:'#0AA', textDecoration:'none'}}>{o.total}$ - {o.status} - {sanitize(o.email || o.userEmail)}</Link>
-              <div style={{fontSize:12, color:'#666'}}>Ref: {sanitize(o.paystackRef)} - {o.items?.length} items - {new Date(o.createdAt).toLocaleDateString()}</div>
-            </div>
-            <button onClick={()=>deleteOrder(o._id)} style={{background:'#FF4444', color:'white', padding:'6px 12px', borderRadius:6, border:'none', cursor:'pointer'}}>🗑️</button>
+            <div><Link to={`/order/${o._id}`} style={{fontWeight:'bold', color:'#0AA'}}>{o.total}$ - {o.status} - {sanitize(o.email || o.userEmail)}</Link><div style={{fontSize:12}}>Ref: {sanitize(o.paystackRef)} - {o.items?.length} items</div></div>
+            <button onClick={()=>deleteOrder(o._id)} style={{background:'#FF4444', color:'white', padding:'6px 12px', borderRadius:6, border:'none'}}>🗑️</button>
           </div>
         ))}
       </div>
@@ -352,13 +349,13 @@ export default function App(){
   return (
     <AuthContext.Provider value={{user,setUser}}><CartContext.Provider value={{cart,addToCart,remove,clearCart}}>
       <BrowserRouter>
-        <nav style={{display:'flex', gap:12, padding:12, background:'black', color:'white', alignItems:'center', flexWrap:'wrap'}}>
-          <Link to="/" style={{color:'white', fontWeight:'bold'}}>EsosaTech</Link>
+        <nav style={{display:'flex', gap:12, padding:14, background:'black', color:'white', alignItems:'center', flexWrap:'wrap'}}>
+          <Link to="/" style={{color:'white', fontWeight:'bold', fontSize:18}}>EsosaTech</Link>
           <Link to="/" style={{color:'white'}}>Store</Link>
           <Link to="/cart" style={{color:'white'}}>Cart ({cart.length})</Link>
           {user && <Link to="/myorders" style={{color:'white'}}>My Orders</Link>}
-          {isAdmin && <Link to="/admin" style={{background:'gold', color:'black', padding:'4px 8px', borderRadius:6}}>Admin 👑</Link>}
-          {!user ? <><Link to="/login" style={{color:'white'}}>Login</Link><Link to="/register" style={{color:'white'}}>Register</Link></> : <><span>{user.email}</span><button onClick={()=>{localStorage.clear();setUser(null); window.location='/';}}>Logout</button></>}
+          {isAdmin && <Link to="/admin" style={{background:'gold', color:'black', padding:'6px 12px', borderRadius:8, fontWeight:'bold'}}>Admin 👑</Link>}
+          {!user ? <><Link to="/login" style={{color:'white'}}>Login</Link><Link to="/register" style={{color:'white'}}>Register</Link></> : <><span style={{opacity:0.8}}>{user.email}</span><button onClick={()=>{localStorage.clear();setUser(null); window.location='/';}} style={{padding:'6px 10px', borderRadius:6, border:'none', cursor:'pointer'}}>Logout</button></>}
         </nav>
         <Routes>
           <Route path="/" element={<Store/>}/>
