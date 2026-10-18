@@ -17,7 +17,7 @@ const app = express();
 app.use(helmet());
 app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
 
-// === 2. CORS WHITELIST - UPDATED FOR YOUR NEW VERCEL ===
+// === 2. CORS WHITELIST ===
 const allowedOrigins = [
   'https://esosa-shop.vercel.app',
   'https://fullstack-orpin-three.vercel.app',
@@ -73,7 +73,7 @@ const fileFilter = (req,file,cb) => {
 };
 const upload = multer({ storage, fileFilter, limits: { fileSize: 2*1024*1024 }});
 
-mongoose.connect(process.env.MONGO_URI).then(()=>console.log('MongoDB Secure Connected'));
+mongoose.connect(process.env.MONGO_URI).then(()=>console.log('MongoDB Secure Connected - 9 Features Live'));
 
 // === 5. RATE LIMIT ===
 const authLimiter = rateLimit({ windowMs: 15*60*1000, max: 20, message: {msg:'Too many attempts'} });
@@ -89,16 +89,29 @@ const User = mongoose.model('User', new mongoose.Schema({
   isAdmin: { type: Boolean, default: false }
 }));
 
+// === UPDATED PRODUCT WITH RATING + REVIEWS ===
 const Product = mongoose.model('Product', new mongoose.Schema({
   name: {type:String, required:true, trim:true, maxlength:100},
   category: {type:String, enum:['phones','laptops','shirts','watches','headphones','gaming','accessories']},
   description: {type:String, maxlength:500},
   price: {type:Number, min:0, max:100000},
-  image: String
+  image: String,
+  rating: {type:Number, default:4.5},
+  reviews: [{user:String, rating:Number, text:String, createdAt:{type:Date, default:Date.now}}]
 }));
 
+// === UPDATED ORDER WITH ADDRESS, PHONE, FULLNAME ===
 const Order = mongoose.model('Order', new mongoose.Schema({
-  userId: String, userEmail: String, items: Array, total: {type:Number, min:0}, status: { type: String, default: 'Paid' }, paystackRef: String, email: String
+  userId: String, 
+  userEmail: String, 
+  items: Array, 
+  total: {type:Number, min:0}, 
+  status: { type: String, default: 'Paid', enum:['Paid','Shipped','Delivered'] }, 
+  paystackRef: String, 
+  email: String,
+  fullName: String,
+  phone: String,
+  address: String
 }, { timestamps: true }));
 
 const auth = (req,res,next)=>{
@@ -179,7 +192,6 @@ app.get('/api/products', async (req,res)=>{
   }catch{ res.status(500).json({msg:'Error'}) }
 });
 
-// ===== NEW - SINGLE PRODUCT FOR CLICKABLE DETAILS =====
 app.get('/api/products/:id', async (req,res)=>{
   try{
     const product = await Product.findById(req.params.id);
@@ -188,13 +200,28 @@ app.get('/api/products/:id', async (req,res)=>{
   }catch{ res.status(500).json({msg:'Error fetching product'}) }
 });
 
+// NEW - ADD REVIEW
+app.post('/api/products/:id/review', auth, async (req,res)=>{
+  try{
+    const {rating, text} = req.body;
+    const product = await Product.findById(req.params.id);
+    if(!product) return res.status(404).json({msg:'Not found'});
+    product.reviews.push({user: req.user.id, rating: Number(rating)||5, text: String(text).slice(0,200)});
+    // update average rating
+    const avg = product.reviews.reduce((s,r)=>s+r.rating,0)/product.reviews.length;
+    product.rating = avg;
+    await product.save();
+    res.json(product);
+  }catch{ res.status(500).json({msg:'Review failed'}) }
+});
+
 app.post('/api/products', auth, async (req,res)=>{
   try{
     if(!req.user.isAdmin) return res.status(403).json({msg:'Admin only'});
     const {name, category, description, price, image} = req.body;
     if(!name || !price) return res.status(400).json({msg:'Name and price required'});
     if(String(description).length > 500) return res.status(400).json({msg:'Description too long'});
-    res.json(await Product.create({name, category, description, price:Number(price), image}));
+    res.json(await Product.create({name, category, description, price:Number(price), image, rating:4.5, reviews:[]}));
   }catch{ res.status(500).json({msg:'Failed'}) }
 });
 
@@ -204,9 +231,10 @@ app.delete('/api/products/:id', auth, async (req,res)=>{
   res.json({msg:'Deleted'});
 });
 
+// UPDATED - NOW SAVES ADDRESS, PHONE, FULLNAME
 app.post('/api/pay/verify', auth, async (req,res)=>{
   try{
-    const {reference, items, total, email} = req.body;
+    const {reference, items, total, email, address, phone, fullName} = req.body;
     if(!reference) return res.status(400).json({msg:'Reference required'});
     const options = {
       hostname: 'api.paystack.co',
@@ -220,7 +248,7 @@ app.post('/api/pay/verify', auth, async (req,res)=>{
         try{
           const result = JSON.parse(data);
           if(result.data && result.data.status==='success' && result.data.amount >= total*100 - 100){
-            const order = await Order.create({userId:req.user.id, userEmail:email, email, items, total, paystackRef:reference, status:'Paid'});
+            const order = await Order.create({userId:req.user.id, userEmail:email, email, items, total, paystackRef:reference, status:'Paid', address: address||'', phone: phone||'', fullName: fullName||''});
             return res.json(order);
           } else {
             return res.status(400).json({msg:'Payment not verified'});
@@ -259,9 +287,20 @@ app.delete('/api/orders/:id', auth, async (req,res)=>{
   }catch{ res.status(500).json({msg:'Delete failed'}) }
 });
 
-app.get('/', (req,res)=> res.send('Esosa API Secure Live - Clickable Products + Details Ready ✅'));
+// NEW - UPDATE ORDER STATUS TO SHIPPED / DELIVERED
+app.patch('/api/orders/:id/status', auth, async (req,res)=>{
+  try{
+    if(req.user.isAdmin!==true) return res.status(403).json({msg:'Admin only'});
+    const {status} = req.body;
+    if(!['Paid','Shipped','Delivered'].includes(status)) return res.status(400).json({msg:'Invalid status'});
+    const order = await Order.findByIdAndUpdate(req.params.id, {status}, {new:true});
+    if(!order) return res.status(404).json({msg:'Not found'});
+    res.json(order);
+  }catch{ res.status(500).json({msg:'Status update failed'}) }
+});
 
-// === ERROR HANDLER ===
+app.get('/', (req,res)=> res.send('Esosa API Secure Live - 9 Features Ready ✅ - Quantity, Address, Wishlist, Ratings, Status'));
+
 app.use((err, req, res, next)=>{
   if(err.type === 'entity.too.large' || err.status === 413 || err.message.includes('too large')){
     return res.status(413).json({msg:'Payload too large - Max 10kb blocked'});
@@ -277,4 +316,4 @@ app.use((err, req, res, next)=>{
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, ()=> console.log(`🔒 SECURE Server Live on ${PORT} - Clickable Products Ready ✅`));
+app.listen(PORT, ()=> console.log(`🔒 SECURE Server Live on ${PORT} - 9 Features Ready ✅`));
