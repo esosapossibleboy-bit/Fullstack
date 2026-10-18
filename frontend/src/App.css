@@ -1,11 +1,104 @@
-*{margin:0;padding:0;box-sizing:border-box;font-family:Arial}
-.nav{display:flex;gap:15px;padding:15px;background:#111;color:white;align-items:center}
-.nav a{color:white;text-decoration:none}
-.adminBtn{background:red;padding:5px 10px;border-radius:5px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:20px;padding:20px}
-.card{border:1px solid #ddd;padding:15px;border-radius:10px;text-align:center}
-.card img{width:100%;height:150px;object-fit:cover}
-.form{display:flex;flex-direction:column;gap:10px;max-width:300px;margin:50px auto}
-.form input{padding:10px}
-.form button, .card button{padding:10px;background:black;color:white;border:none;cursor:pointer}
-.order{border:1px solid #ccc;padding:10px;margin:10px}
+/* ESOSA TECH - SECURE E-COMMERCE - No Backdoor UI v2 */
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #f8f9fa;
+  color: #222;
+  line-height: 1.5;
+}
+
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+}
+
+.nav a {
+  text-decoration: none;
+  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: 0.2s;
+}
+
+.nav a:hover { background: rgba(255,255,255,0.15); }
+
+.nav button {
+  background: #ff3b30;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.form {
+  background: white;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+
+.form input, .form select {
+  width: 100%;
+  padding: 12px;
+  border: 1.5px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+}
+
+.form input:focus, .form select:focus {
+  border-color: #000;
+}
+
+.form button {
+  padding: 12px;
+  background: #000;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.form button:hover { background: #222; }
+.form button:disabled { background: #999; cursor: not-allowed; }
+
+/* Cards */
+.grid .card {
+  background: white;
+  transition: 0.2s;
+  overflow: hidden;
+}
+
+.grid .card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+}
+
+.card img {
+  -webkit-user-drag: none;
+}
+
+.order {
+  background: white;
+}
+
+/* Security: hide sensitive data from print/screenshot */
+@media print {
+  .nav, .form button { display: none; }
+}
+
+/* Mobile secure */
+@media (max-width: 600px) {
+  .grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+  .form {
+    margin: 10px !important;
+    max-width: 100% !important;
+  }
+}
