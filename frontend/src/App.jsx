@@ -225,7 +225,7 @@ function OrderDetails(){
         <p><b>Ref:</b> {sanitize(order.paystackRef)}</p>
         <p><b>Status:</b> <span style={{background: order.status==='Paid' ? 'lightgreen' : '#eee', padding:'2px 8px', borderRadius:4}}>{order.status}</span></p>
         <p><b>Total:</b> ${order.total}</p>
-        <p><b>Email:</b> {order.email}</p>
+        <p><b>Email:</b> {order.email || order.userEmail}</p>
         <p><b>Date:</b> {new Date(order.createdAt).toLocaleString()}</p>
         <h3>Items ({order.items?.length}):</h3>
         {order.items?.map((it,i)=><div key={i} style={{display:'flex', justifyContent:'space-between', padding:8, borderBottom:'1px solid #eee'}}><span>{sanitize(it.name)}</span><b>${it.price}</b></div>)}
@@ -235,6 +235,7 @@ function OrderDetails(){
   )
 }
 
+// ===== FIXED BIG FORM - THIS IS THE NEW CODE =====
 function Admin(){
   const [orders,setOrders]=useState([]); 
   const [products,setProducts]=useState([]);
@@ -269,9 +270,8 @@ function Admin(){
     if(!confirm(`Delete ${productName}?`)) return;
     try {
       const res = await fetch(`${API}/api/products/${id}`,{method:'DELETE', headers:{'x-auth-token':localStorage.getItem('token')}});
-      const data = await res.json();
-      if(res.ok){ alert('Deleted ✅'); setProducts(products.filter(p=>p._id!==id)); } else alert(data.msg || 'Delete failed - check backend route');
-    } catch { alert('Delete error - add DELETE route in backend'); }
+      if(res.ok){ alert('Deleted ✅'); setProducts(products.filter(p=>p._id!==id)); } else alert('Delete failed');
+    } catch { alert('Delete error'); }
   };
 
   const deleteOrder = async (id)=>{
@@ -285,41 +285,55 @@ function Admin(){
   const totalSales = orders.reduce((s,o)=>s+ (Number(o.total) || 0),0);
   return (
     <div style={{padding:20}}>
-      <h2>Admin - Orders ({orders.length}) - Sales ${totalSales} - Products ({products.length})</h2>
+      <h2 style={{textAlign:'center', marginBottom:20}}>Admin - Orders ({orders.length}) - Sales ${totalSales} - Products ({products.length})</h2>
       
-      <form onSubmit={addProduct} style={{border:'2px dashed #888', padding:15, maxWidth:450, borderRadius:12, background:'white', marginBottom:20}}>
-        <h3>Add Product</h3>
-        <input value={name} onChange={e=>setName(e.target.value)} placeholder="Product Name" required/>
-        <select value={category} onChange={e=>setCategory(e.target.value)} style={{padding:8, margin:'6px 0'}}><option value="phones">phones</option><option value="laptops">laptops</option><option value="shirts">shirts</option><option value="watches">watches</option><option value="headphones">headphones</option><option value="gaming">gaming</option><option value="accessories">accessories</option></select>
-        <input value={desc} onChange={e=>setDesc(e.target.value)} placeholder="Description" required/>
-        <input value={price} onChange={e=>setPrice(e.target.value)} placeholder="Price" type="number" required/>
-        <div style={{background:'#f5f5f5', padding:10, margin:'10px 0', borderRadius:8}}><label><b>📁 Upload (Max 2MB)</b></label><input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFileUpload}/>{uploading && <p>Uploading...</p>}</div>
-        <input value={image} onChange={e=>setImage(e.target.value)} placeholder="Image URL"/>
-        {image && <img src={image} alt="preview" style={{width:120, height:120, objectFit:'cover', marginTop:8}}/>}
-        <button type="submit" style={{marginTop:10}}>Add Product</button>
+      {/* BIG FORM - FITS NOW */}
+      <form onSubmit={addProduct} style={{border:'2px solid #222', padding:28, maxWidth:700, margin:'0 auto 35px auto', borderRadius:18, background:'white', boxShadow:'0 6px 20px rgba(0,0,0,0.1)'}}>
+        <h3 style={{textAlign:'center', marginBottom:22, fontSize:26}}>Add Product</h3>
+        
+        <div style={{display:'flex', gap:12, marginBottom:14, flexWrap:'wrap'}}>
+          <input value={name} onChange={e=>setName(e.target.value)} placeholder="Product Name" required style={{flex:2, minWidth:200, padding:14, borderRadius:10, border:'1px solid #ccc', fontSize:16}}/>
+          <select value={category} onChange={e=>setCategory(e.target.value)} style={{flex:1, minWidth:130, padding:14, borderRadius:10, border:'1px solid #ccc', fontSize:15}}><option value="phones">phones</option><option value="laptops">laptops</option><option value="shirts">shirts</option><option value="watches">watches</option><option value="headphones">headphones</option><option value="gaming">gaming</option><option value="accessories">accessories</option></select>
+        </div>
+
+        <div style={{display:'flex', gap:12, marginBottom:14, flexWrap:'wrap'}}>
+          <input value={desc} onChange={e=>setDesc(e.target.value)} placeholder="Description - what is this product?" required style={{flex:2, minWidth:200, padding:14, borderRadius:10, border:'1px solid #ccc', fontSize:15}}/>
+          <input value={price} onChange={e=>setPrice(e.target.value)} placeholder="Price $" type="number" required style={{flex:1, minWidth:120, padding:14, borderRadius:10, border:'1px solid #ccc', fontSize:15}}/>
+        </div>
+
+        <div style={{background:'#eef6ff', padding:18, margin:'18px 0', borderRadius:12, border:'2px dashed #0AA', textAlign:'center'}}>
+          <label style={{fontWeight:'bold', display:'block', marginBottom:10, fontSize:16}}>📁 Upload Product Image (Max 2MB - JPG / PNG / WEBP)</label>
+          <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFileUpload} style={{fontSize:14}}/>
+          {uploading && <p style={{color:'#0AA', fontWeight:'bold', marginTop:8}}>Uploading... wait</p>}
+        </div>
+
+        <input value={image} onChange={e=>setImage(e.target.value)} placeholder="Image URL will appear here after upload, or paste https:// link" style={{width:'100%', padding:14, borderRadius:10, border:'1px solid #ccc', fontSize:14, marginBottom:14, boxSizing:'border-box'}}/>
+        {image && <img src={image} alt="preview" style={{width:'100%', maxHeight:220, objectFit:'contain', marginBottom:14, borderRadius:10, border:'1px solid #eee'}}/>}
+        
+        <button type="submit" style={{width:'100%', padding:16, background:'black', color:'white', borderRadius:12, fontSize:18, fontWeight:'bold', cursor:'pointer', border:'none'}}>➕ Add Product to Store</button>
       </form>
 
-      <h3>🛒 All Products - Click 🗑️ to Delete</h3>
-      <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:10, marginBottom:30}}>
+      <h3 style={{marginBottom:15}}>🛒 All Products - Click 🗑️ to Delete ({products.length})</h3>
+      <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:12, marginBottom:30}}>
         {products.map(p=>(
-          <div key={p._id} style={{border:'1px solid #ddd', padding:10, borderRadius:8, background:'white'}}>
-            <img src={p.image?.startsWith('/uploads') ? `${API}${p.image}` : p.image} style={{width:'100%', height:120, objectFit:'cover', borderRadius:6}} alt=""/>
-            <p style={{margin:'6px 0', fontWeight:'bold'}}>{sanitize(p.name)}</p>
-            <p>${p.price} - {p.category}</p>
-            <button onClick={()=>deleteProduct(p._id, p.name)} style={{width:'100%', background:'#FF4444', color:'white', padding:6, borderRadius:6, border:'none', cursor:'pointer'}}>🗑️ Delete Product</button>
+          <div key={p._id} style={{border:'1px solid #ddd', padding:10, borderRadius:10, background:'white'}}>
+            <img src={p.image?.startsWith('/uploads') ? `${API}${p.image}` : p.image} style={{width:'100%', height:130, objectFit:'cover', borderRadius:8}} alt=""/>
+            <p style={{margin:'8px 0 4px 0', fontWeight:'bold', fontSize:14}}>{sanitize(p.name)}</p>
+            <p style={{margin:0, fontSize:13}}>${p.price} - {p.category}</p>
+            <button onClick={()=>deleteProduct(p._id, p.name)} style={{width:'100%', marginTop:8, background:'#FF4444', color:'white', padding:8, borderRadius:6, border:'none', cursor:'pointer', fontWeight:'bold'}}>🗑️ Delete Product</button>
           </div>
         ))}
       </div>
 
-      <h3>📦 All Orders - Click for Details</h3>
+      <h3>📦 All Orders ({orders.length})</h3>
       <div style={{display:'grid', gap:8}}>
         {orders.map(o=>(
-          <div key={o._id} style={{border:'1px solid #ddd', padding:10, borderRadius:8, background:'white', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+          <div key={o._id} style={{border:'1px solid #ddd', padding:12, borderRadius:8, background:'white', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
             <div>
-              <Link to={`/order/${o._id}`} style={{fontWeight:'bold', color:'#0AA'}}>{o.total}$ - {o.status} - {sanitize(o.email)}</Link>
-              <div style={{fontSize:12}}>Ref: {sanitize(o.paystackRef)} - {o.items?.length} items - {new Date(o.createdAt).toLocaleDateString()}</div>
+              <Link to={`/order/${o._id}`} style={{fontWeight:'bold', color:'#0AA', textDecoration:'none'}}>{o.total}$ - {o.status} - {sanitize(o.email || o.userEmail)}</Link>
+              <div style={{fontSize:12, color:'#666'}}>Ref: {sanitize(o.paystackRef)} - {o.items?.length} items - {new Date(o.createdAt).toLocaleDateString()}</div>
             </div>
-            <button onClick={()=>deleteOrder(o._id)} style={{background:'#FF4444', color:'white', padding:'4px 8px', borderRadius:4, border:'none', cursor:'pointer'}}>🗑️</button>
+            <button onClick={()=>deleteOrder(o._id)} style={{background:'#FF4444', color:'white', padding:'6px 12px', borderRadius:6, border:'none', cursor:'pointer'}}>🗑️</button>
           </div>
         ))}
       </div>
