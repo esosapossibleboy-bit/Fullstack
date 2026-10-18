@@ -1,3 +1,4 @@
+
 import { useState, useEffect, createContext, useContext } from 'react';
 import { BrowserRouter, Routes, Route, Link, Navigate, useNavigate } from 'react-router-dom';
 import './App.css';
@@ -186,23 +187,63 @@ function Register(){
 }
 
 function Cart(){
-  const { cart, remove } = useContext(CartContext); const { user } = useContext(AuthContext); const nav=useNavigate();
+  const { cart, remove } = useContext(CartContext); 
+  const { user } = useContext(AuthContext); 
+  const nav=useNavigate();
   const total = cart.reduce((s,i)=>s+ (Number(i.price) || 0),0);
+  
+  useEffect(()=>{
+    if(!document.querySelector('script[src="https://js.paystack.co/v1/inline.js"]')){
+      const s=document.createElement('script'); 
+      s.src='https://js.paystack.co/v1/inline.js'; 
+      s.async=true;
+      document.body.appendChild(s);
+    }
+  },[]);
+
   const payWithPaystack = () => {
+    console.log("Pay clicked!", {total, user, key: PAYSTACK_PUBLIC_KEY ? "exists" : "MISSING"});
     if(total <=0) return alert('Cart empty');
-    if(!PAYSTACK_PUBLIC_KEY) return alert('Paystack key missing');
-    if(!window.PaystackPop){ const s=document.createElement('script'); s.src='https://js.paystack.co/v1/inline.js'; document.body.appendChild(s); setTimeout(()=>payWithPaystack(),1500); return; }
-    const handler = window.PaystackPop.setup({
-      key: PAYSTACK_PUBLIC_KEY, email: user.email, amount: total*100, currency: 'NGN', ref: 'ESOSA_'+Date.now(),
-      callback: async function(response){
-        const res = await fetch(`${API}/api/pay/verify`,{method:'POST',headers:{'Content-Type':'application/json','x-auth-token':localStorage.getItem('token')},body:JSON.stringify({reference: response.reference, items: cart, total, email: user.email})});
-        const data = await res.json();
-        if(res.ok){ alert('Payment Success! ✅ Ref: '+response.reference); nav('/myorders'); }
-        else alert(data.msg || 'Verify failed');
-      },
-      onClose: function(){ console.log('closed'); }
-    }); handler.openIframe();
+    if(!user?.email) return alert('Please login again - no email');
+    if(!PAYSTACK_PUBLIC_KEY) {
+      console.error("Missing VITE_PAYSTACK_KEY");
+      return alert('Paystack public key missing! Add VITE_PAYSTACK_KEY in Vercel env');
+    }
+    if(!window.PaystackPop){ 
+      alert('Paystack loading... click again in 2 seconds');
+      const s=document.createElement('script'); 
+      s.src='https://js.paystack.co/v1/inline.js'; 
+      document.body.appendChild(s); 
+      return; 
+    }
+    try {
+      const handler = window.PaystackPop.setup({
+        key: PAYSTACK_PUBLIC_KEY, 
+        email: user.email, 
+        amount: total*100, 
+        currency: 'NGN', 
+        ref: 'ESOSA_'+Date.now(),
+        callback: async function(response){
+          try {
+            const res = await fetch(`${API}/api/pay/verify`,{
+              method:'POST',
+              headers:{'Content-Type':'application/json','x-auth-token':localStorage.getItem('token')},
+              body:JSON.stringify({reference: response.reference, items: cart, total, email: user.email})
+            });
+            const data = await res.json();
+            if(res.ok){ alert('Payment Success! ✅ Ref: '+response.reference); nav('/myorders'); }
+            else alert(data.msg || 'Verify failed');
+          } catch(e){ alert('Verify error: '+e.message); }
+        },
+        onClose: function(){ console.log('Payment closed'); }
+      }); 
+      handler.openIframe();
+    } catch(e){
+      alert('Paystack error: '+e.message);
+      console.error(e);
+    }
   };
+
   return (
     <div style={{padding:20}}>
       <h2>Cart - ${total}</h2>
