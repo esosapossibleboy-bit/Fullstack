@@ -1,4 +1,3 @@
-
 import { useState, useEffect, createContext, useContext } from 'react';
 import { BrowserRouter, Routes, Route, Link, Navigate, useNavigate } from 'react-router-dom';
 import './App.css';
@@ -6,17 +5,13 @@ import './App.css';
 const API = import.meta.env.VITE_API_URL || 'https://esosa-fullstack.onrender.com';
 const PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_KEY;
 
-if(!PAYSTACK_PUBLIC_KEY){
-  console.warn("⚠️ Missing VITE_PAYSTACK_KEY");
-}
-
 const AuthContext = createContext();
 const CartContext = createContext();
 
 function ProtectedRoute({ children, adminOnly }){
   const { user } = useContext(AuthContext);
   if(!user) return <Navigate to="/login" replace />;
-  if(adminOnly && user.isAdmin !== true) return <h2 style={{padding:30}}>❌ Admin Only - esosa@test.com</h2>;
+  if(adminOnly && user.isAdmin !== true) return <h2 style={{padding:30}}>❌ Admin Only</h2>;
   return children;
 }
 
@@ -40,7 +35,6 @@ function Store(){
   const [search,setSearch] = useState('');
   const [category,setCategory] = useState('All');
   const { addToCart } = useContext(CartContext);
-
   const fetchProducts = async () => {
     try {
       const q = `?search=${encodeURIComponent(search)}&category=${encodeURIComponent(category)}`;
@@ -51,10 +45,8 @@ function Store(){
       setProducts(unique);
     } catch { setProducts([]); }
   };
-
   useEffect(()=>{ fetchProducts(); },[search, category]);
   const categories = ['All','phones','laptops','shirts','watches','headphones','gaming','accessories'];
-
   return (
     <div style={{padding:20}}>
       <div style={{display:'flex', gap:10, marginBottom:20, flexWrap:'wrap'}}>
@@ -85,7 +77,7 @@ function Login(){
   const { setUser } = useContext(AuthContext); const nav=useNavigate();
   const submit=async(e)=>{
     e.preventDefault();
-    if(attempts >= 5) return alert('Too many attempts. Wait 5 mins');
+    if(attempts >= 5) return alert('Too many attempts');
     setLoading(true);
     try {
       const res=await fetch(`${API}/api/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email.toLowerCase().trim(),password:pass})});
@@ -97,7 +89,7 @@ function Login(){
   };
   const googleLogin = async () => {
     const googleEmail = prompt('Enter Google Email:');
-    if(!googleEmail || !googleEmail.includes('@')) return alert('Invalid Gmail');
+    if(!googleEmail || !googleEmail.includes('@')) return;
     try {
       const res = await fetch(`${API}/api/auth/google`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:googleEmail.toLowerCase().trim(), firstName:'Google', lastName:'User'})});
       const data = await res.json();
@@ -109,7 +101,7 @@ function Login(){
       <h2>Login</h2>
       <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="email" required type="email"/>
       <input type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="password" required/>
-      <button disabled={loading || attempts>=5}>{loading?'Loading...':'Login'}</button>
+      <button disabled={loading}>{loading?'Loading...':'Login'}</button>
       <div style={{textAlign:'center', color:'#888', fontSize:13}}>OR</div>
       <button type="button" onClick={googleLogin} style={{width:'100%', background:'white', color:'#444', border:'1px solid #ccc', padding:'10px', borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', gap:10, fontWeight:600, cursor:'pointer'}}>
         <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="google" style={{width:20, height:20}} />
@@ -126,11 +118,9 @@ function Register(){
   const strength = checkPasswordStrength(form.password);
   const isStrong = Object.values(strength).every(v=>v===true);
   const handle = (k,v) => setForm({...form,[k]:v.slice(0,100)});
-
   const submit=async(e)=>{
     e.preventDefault();
-    if(!isStrong){ setError('Weak password - need 8+ chars, Big letter, small, number, symbol'); return; }
-    if(!form.email.includes('@')){ setError('Invalid email'); return; }
+    if(!isStrong){ setError('Weak password'); return; }
     setLoading(true);
     try {
       const res=await fetch(`${API}/api/auth/register`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...form, email:form.email.toLowerCase().trim()})});
@@ -139,35 +129,28 @@ function Register(){
     } catch { setError('Network error'); }
     setLoading(false);
   };
-
   const googleLogin = async () => {
     const googleEmail = prompt('Enter Google Email:');
-    if(!googleEmail || !googleEmail.includes('@') || googleEmail.length > 100) return alert('Invalid Gmail');
+    if(!googleEmail || !googleEmail.includes('@')) return;
     try {
       const res = await fetch(`${API}/api/auth/google`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:googleEmail.toLowerCase().trim(), firstName:'Google', lastName:'User'})});
       const data = await res.json();
-      if(data.token){
-        localStorage.setItem('token',data.token); 
-        localStorage.setItem('user',JSON.stringify(data.user)); 
-        setUser(data.user); 
-        nav('/');
-      } else alert(data.msg || 'Google register failed');
+      if(data.token){ localStorage.setItem('token',data.token); localStorage.setItem('user',JSON.stringify(data.user)); setUser(data.user); nav('/'); }
     } catch { alert('Google login failed'); }
   };
-
   return (
-    <form onSubmit={submit} className="form" style={{maxWidth:420, margin:'20px auto', padding:20, border:'1px solid #ddd', borderRadius:12, display:'flex', flexDirection:'column', gap:8, background:'white'}}>
+    <form onSubmit={submit} style={{maxWidth:420, margin:'20px auto', padding:20, border:'1px solid #ddd', borderRadius:12, display:'flex', flexDirection:'column', gap:8, background:'white'}}>
       <h2>Create Account</h2>
-      <div style={{display:'flex', gap:8}}><input value={form.firstName} onChange={e=>handle('firstName',e.target.value)} placeholder="First Name" required maxLength={50}/><input value={form.lastName} onChange={e=>handle('lastName',e.target.value)} placeholder="Last Name" required maxLength={50}/></div>
+      <div style={{display:'flex', gap:8}}><input value={form.firstName} onChange={e=>handle('firstName',e.target.value)} placeholder="First Name" required/><input value={form.lastName} onChange={e=>handle('lastName',e.target.value)} placeholder="Last Name" required/></div>
       <div style={{display:'flex', gap:8}}>
         <select value={form.gender} onChange={e=>handle('gender',e.target.value)} style={{flex:1, padding:8}}><option>Male</option><option>Female</option><option>Other</option></select>
-        <input value={form.country} onChange={e=>handle('country',e.target.value)} placeholder="Country" required maxLength={50} style={{flex:1}}/>
+        <input value={form.country} onChange={e=>handle('country',e.target.value)} placeholder="Country" required style={{flex:1}}/>
       </div>
-      <input value={form.phone} onChange={e=>handle('phone',e.target.value)} placeholder="Phone +234..." required maxLength={20}/>
-      <input value={form.email} onChange={e=>handle('email',e.target.value)} placeholder="Email" required type="email" maxLength={100}/>
-      <input type="password" value={form.password} onChange={e=>handle('password',e.target.value)} placeholder="Password" required maxLength={100}/>
+      <input value={form.phone} onChange={e=>handle('phone',e.target.value)} placeholder="Phone +234..." required/>
+      <input value={form.email} onChange={e=>handle('email',e.target.value)} placeholder="Email" required type="email"/>
+      <input type="password" value={form.password} onChange={e=>handle('password',e.target.value)} placeholder="Password" required/>
       {form.password && (
-        <div style={{fontSize:'12px', lineHeight:'1.6'}}>
+        <div style={{fontSize:'12px'}}>
           <div style={{color: strength.length ? 'green' : 'red'}}>{strength.length ? '✅' : '❌'} 8+ chars</div>
           <div style={{color: strength.upper ? 'green' : 'red'}}>{strength.upper ? '✅' : '❌'} Uppercase</div>
           <div style={{color: strength.lower ? 'green' : 'red'}}>{strength.lower ? '✅' : '❌'} lowercase</div>
@@ -176,7 +159,7 @@ function Register(){
         </div>
       )}
       {error && <p style={{color:'red', fontSize:13}}>{error}</p>}
-      <button disabled={!isStrong || loading} style={{opacity: isStrong ? 1 : 0.5, background: isStrong ? 'black' : '#888', color:'white', padding:10, borderRadius:6, cursor: isStrong ? 'pointer' : 'not-allowed'}}>{loading?'Creating...': isStrong ? 'Register ✅' : 'Weak Password ❌'}</button>
+      <button disabled={!isStrong || loading} style={{opacity: isStrong ? 1 : 0.5, background: isStrong ? 'black' : '#888', color:'white', padding:10, borderRadius:6}}>{loading?'Creating...': isStrong ? 'Register ✅' : 'Weak Password ❌'}</button>
       <div style={{textAlign:'center', color:'#888', fontSize:13, marginTop:5}}>OR</div>
       <button type="button" onClick={googleLogin} style={{width:'100%', background:'white', color:'#444', border:'1px solid #ccc', padding:'10px', borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', gap:10, fontWeight:600, cursor:'pointer'}}>
         <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="google" style={{width:20, height:20}} />
@@ -186,6 +169,7 @@ function Register(){
   )
 }
 
+// ===== FIXED CART - NO ASYNC IN CALLBACK =====
 function Cart(){
   const { cart, remove } = useContext(CartContext); 
   const { user } = useContext(AuthContext); 
@@ -196,52 +180,44 @@ function Cart(){
     if(!document.querySelector('script[src="https://js.paystack.co/v1/inline.js"]')){
       const s=document.createElement('script'); 
       s.src='https://js.paystack.co/v1/inline.js'; 
-      s.async=true;
       document.body.appendChild(s);
     }
   },[]);
 
   const payWithPaystack = () => {
-    console.log("Pay clicked!", {total, user, key: PAYSTACK_PUBLIC_KEY ? "exists" : "MISSING"});
     if(total <=0) return alert('Cart empty');
-    if(!user?.email) return alert('Please login again - no email');
-    if(!PAYSTACK_PUBLIC_KEY) {
-      console.error("Missing VITE_PAYSTACK_KEY");
-      return alert('Paystack public key missing! Add VITE_PAYSTACK_KEY in Vercel env');
-    }
-    if(!window.PaystackPop){ 
-      alert('Paystack loading... click again in 2 seconds');
-      const s=document.createElement('script'); 
-      s.src='https://js.paystack.co/v1/inline.js'; 
-      document.body.appendChild(s); 
-      return; 
-    }
-    try {
-      const handler = window.PaystackPop.setup({
-        key: PAYSTACK_PUBLIC_KEY, 
-        email: user.email, 
-        amount: total*100, 
-        currency: 'NGN', 
-        ref: 'ESOSA_'+Date.now(),
-        callback: async function(response){
-          try {
-            const res = await fetch(`${API}/api/pay/verify`,{
-              method:'POST',
-              headers:{'Content-Type':'application/json','x-auth-token':localStorage.getItem('token')},
-              body:JSON.stringify({reference: response.reference, items: cart, total, email: user.email})
-            });
-            const data = await res.json();
-            if(res.ok){ alert('Payment Success! ✅ Ref: '+response.reference); nav('/myorders'); }
-            else alert(data.msg || 'Verify failed');
-          } catch(e){ alert('Verify error: '+e.message); }
-        },
-        onClose: function(){ console.log('Payment closed'); }
-      }); 
-      handler.openIframe();
-    } catch(e){
-      alert('Paystack error: '+e.message);
-      console.error(e);
-    }
+    if(!user?.email) return alert('Please login again');
+    if(!PAYSTACK_PUBLIC_KEY) return alert('Missing VITE_PAYSTACK_KEY in Vercel env - add it!');
+    if(!window.PaystackPop) return alert('Paystack loading... wait 2 sec and click again');
+
+    // FIXED: callback is normal function, not async
+    const handler = window.PaystackPop.setup({
+      key: PAYSTACK_PUBLIC_KEY,
+      email: user.email,
+      amount: total * 100,
+      currency: 'NGN',
+      ref: 'ESOSA_'+Date.now(),
+      callback: function(response){
+        fetch(`${API}/api/pay/verify`,{
+          method:'POST',
+          headers:{'Content-Type':'application/json','x-auth-token':localStorage.getItem('token')},
+          body:JSON.stringify({reference: response.reference, items: cart, total, email: user.email})
+        })
+        .then(r=>r.json())
+        .then(d=>{
+          alert('Payment Success! ✅ Ref: '+response.reference);
+          nav('/myorders');
+        })
+        .catch(err=>{
+          alert('Payment done but verify failed: '+response.reference);
+          nav('/myorders');
+        });
+      },
+      onClose: function(){
+        console.log('Payment closed');
+      }
+    });
+    handler.openIframe();
   };
 
   return (
