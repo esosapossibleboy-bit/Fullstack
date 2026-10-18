@@ -169,9 +169,8 @@ function Register(){
   )
 }
 
-// ===== FIXED CART - NO ASYNC IN CALLBACK =====
 function Cart(){
-  const { cart, remove } = useContext(CartContext); 
+  const { cart, remove, clearCart } = useContext(CartContext); 
   const { user } = useContext(AuthContext); 
   const nav=useNavigate();
   const total = cart.reduce((s,i)=>s+ (Number(i.price) || 0),0);
@@ -187,10 +186,9 @@ function Cart(){
   const payWithPaystack = () => {
     if(total <=0) return alert('Cart empty');
     if(!user?.email) return alert('Please login again');
-    if(!PAYSTACK_PUBLIC_KEY) return alert('Missing VITE_PAYSTACK_KEY in Vercel env - add it!');
-    if(!window.PaystackPop) return alert('Paystack loading... wait 2 sec and click again');
+    if(!PAYSTACK_PUBLIC_KEY) return alert('Missing VITE_PAYSTACK_KEY in Vercel env');
+    if(!window.PaystackPop) return alert('Paystack loading... wait 2 sec');
 
-    // FIXED: callback is normal function, not async
     const handler = window.PaystackPop.setup({
       key: PAYSTACK_PUBLIC_KEY,
       email: user.email,
@@ -206,10 +204,12 @@ function Cart(){
         .then(r=>r.json())
         .then(d=>{
           alert('Payment Success! ✅ Ref: '+response.reference);
+          clearCart();
           nav('/myorders');
         })
         .catch(err=>{
           alert('Payment done but verify failed: '+response.reference);
+          clearCart();
           nav('/myorders');
         });
       },
@@ -279,10 +279,11 @@ export default function App(){
   const [cart,setCart]=useState([]);
   const addToCart=(p)=>{ if(cart.length >=20) return alert('Max 20 items'); setCart([...cart,p]); };
   const remove=(i)=>setCart(cart.filter((_,idx)=>idx!==i));
+  const clearCart=()=>setCart([]);
   const isAdmin = user?.isAdmin === true;
   useEffect(()=>{ const script = document.createElement('script'); script.src = 'https://js.paystack.co/v1/inline.js'; document.body.appendChild(script); },[]);
   return (
-    <AuthContext.Provider value={{user,setUser}}><CartContext.Provider value={{cart,addToCart,remove}}>
+    <AuthContext.Provider value={{user,setUser}}><CartContext.Provider value={{cart,addToCart,remove,clearCart}}>
       <BrowserRouter>
         <nav style={{display:'flex', gap:12, padding:12, background:'black', color:'white', alignItems:'center', flexWrap:'wrap'}}>
           <Link to="/" style={{color:'white', fontWeight:'bold'}}>EsosaTech</Link>
