@@ -1,5 +1,5 @@
 import { useState, useEffect, createContext, useContext } from 'react';
-import { BrowserRouter, Routes, Route, Link, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import './App.css';
 
 const API = import.meta.env.VITE_API_URL || 'https://esosa-fullstack.onrender.com';
@@ -24,7 +24,6 @@ function checkPasswordStrength(pwd){
     special: /[!@#$%^&*]/.test(pwd),
   };
 }
-
 const sanitize = (str) => {
   if(!str) return '';
   return String(str).replace(/[<>\"']/g, '').trim().slice(0, 100);
@@ -50,7 +49,7 @@ function Store(){
   return (
     <div style={{padding:20}}>
       <div style={{display:'flex', gap:10, marginBottom:20, flexWrap:'wrap'}}>
-        <input value={search} onChange={e=>setSearch(e.target.value.slice(0,50))} placeholder="🔍 Search products..." style={{padding:10, width:300, borderRadius:8, border:'1px solid #ccc'}} maxLength={50}/>
+        <input value={search} onChange={e=>setSearch(e.target.value.slice(0,50))} placeholder="🔍 Search" style={{padding:10, width:300, borderRadius:8, border:'1px solid #ccc'}} maxLength={50}/>
         <select value={category} onChange={e=>setCategory(e.target.value)} style={{padding:10, borderRadius:8}}>
           {categories.map(c=><option key={c} value={c}>{c}</option>)}
         </select>
@@ -104,8 +103,7 @@ function Login(){
       <button disabled={loading}>{loading?'Loading...':'Login'}</button>
       <div style={{textAlign:'center', color:'#888', fontSize:13}}>OR</div>
       <button type="button" onClick={googleLogin} style={{width:'100%', background:'white', color:'#444', border:'1px solid #ccc', padding:'10px', borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', gap:10, fontWeight:600, cursor:'pointer'}}>
-        <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="google" style={{width:20, height:20}} />
-        Continue with Google
+        <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="google" style={{width:20, height:20}} /> Continue with Google
       </button>
     </form>
   );
@@ -146,7 +144,7 @@ function Register(){
         <select value={form.gender} onChange={e=>handle('gender',e.target.value)} style={{flex:1, padding:8}}><option>Male</option><option>Female</option><option>Other</option></select>
         <input value={form.country} onChange={e=>handle('country',e.target.value)} placeholder="Country" required style={{flex:1}}/>
       </div>
-      <input value={form.phone} onChange={e=>handle('phone',e.target.value)} placeholder="Phone +234..." required/>
+      <input value={form.phone} onChange={e=>handle('phone',e.target.value)} placeholder="Phone" required/>
       <input value={form.email} onChange={e=>handle('email',e.target.value)} placeholder="Email" required type="email"/>
       <input type="password" value={form.password} onChange={e=>handle('password',e.target.value)} placeholder="Password" required/>
       {form.password && (
@@ -162,8 +160,7 @@ function Register(){
       <button disabled={!isStrong || loading} style={{opacity: isStrong ? 1 : 0.5, background: isStrong ? 'black' : '#888', color:'white', padding:10, borderRadius:6}}>{loading?'Creating...': isStrong ? 'Register ✅' : 'Weak Password ❌'}</button>
       <div style={{textAlign:'center', color:'#888', fontSize:13, marginTop:5}}>OR</div>
       <button type="button" onClick={googleLogin} style={{width:'100%', background:'white', color:'#444', border:'1px solid #ccc', padding:'10px', borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', gap:10, fontWeight:600, cursor:'pointer'}}>
-        <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="google" style={{width:20, height:20}} />
-        Continue with Google
+        <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="google" style={{width:20, height:20}} /> Continue with Google
       </button>
     </form>
   )
@@ -174,52 +171,29 @@ function Cart(){
   const { user } = useContext(AuthContext); 
   const nav=useNavigate();
   const total = cart.reduce((s,i)=>s+ (Number(i.price) || 0),0);
-  
   useEffect(()=>{
     if(!document.querySelector('script[src="https://js.paystack.co/v1/inline.js"]')){
-      const s=document.createElement('script'); 
-      s.src='https://js.paystack.co/v1/inline.js'; 
-      document.body.appendChild(s);
+      const s=document.createElement('script'); s.src='https://js.paystack.co/v1/inline.js'; document.body.appendChild(s);
     }
   },[]);
-
   const payWithPaystack = () => {
     if(total <=0) return alert('Cart empty');
     if(!user?.email) return alert('Please login again');
-    if(!PAYSTACK_PUBLIC_KEY) return alert('Missing VITE_PAYSTACK_KEY in Vercel env');
+    if(!PAYSTACK_PUBLIC_KEY) return alert('Missing VITE_PAYSTACK_KEY');
     if(!window.PaystackPop) return alert('Paystack loading... wait 2 sec');
-
     const handler = window.PaystackPop.setup({
-      key: PAYSTACK_PUBLIC_KEY,
-      email: user.email,
-      amount: total * 100,
-      currency: 'NGN',
-      ref: 'ESOSA_'+Date.now(),
+      key: PAYSTACK_PUBLIC_KEY, email: user.email, amount: total * 100, currency: 'NGN', ref: 'ESOSA_'+Date.now(),
       callback: function(response){
         fetch(`${API}/api/pay/verify`,{
-          method:'POST',
-          headers:{'Content-Type':'application/json','x-auth-token':localStorage.getItem('token')},
+          method:'POST', headers:{'Content-Type':'application/json','x-auth-token':localStorage.getItem('token')},
           body:JSON.stringify({reference: response.reference, items: cart, total, email: user.email})
-        })
-        .then(r=>r.json())
-        .then(d=>{
-          alert('Payment Success! ✅ Ref: '+response.reference);
-          clearCart();
-          nav('/myorders');
-        })
-        .catch(err=>{
-          alert('Payment done but verify failed: '+response.reference);
-          clearCart();
-          nav('/myorders');
-        });
+        }).then(r=>r.json()).then(d=>{ alert('Payment Success! ✅ Ref: '+response.reference); clearCart(); nav('/myorders'); })
+        .catch(()=>{ alert('Payment done: '+response.reference); clearCart(); nav('/myorders'); });
       },
-      onClose: function(){
-        console.log('Payment closed');
-      }
+      onClose: function(){ console.log('closed'); }
     });
     handler.openIframe();
   };
-
   return (
     <div style={{padding:20}}>
       <h2>Cart - ${total}</h2>
@@ -231,13 +205,47 @@ function Cart(){
 
 function MyOrders(){
   const [orders,setOrders]=useState([]);
+  const nav=useNavigate();
   useEffect(()=>{ fetch(`${API}/api/orders/my`,{headers:{'x-auth-token':localStorage.getItem('token')}}).then(r=>r.json()).then(d=> Array.isArray(d)? setOrders(d): setOrders([])).catch(()=> setOrders([])); },[]);
-  return <div style={{padding:20}}><h2>My Orders</h2>{orders.map(o=><div key={o._id} style={{border:'1px solid #ddd', padding:10, marginBottom:8, borderRadius:8, background:'white'}}>{Number(o.total)||0}$ - {sanitize(o.status)} - {o.items?.length || 0} items - Ref: {sanitize(o.paystackRef)}</div>)}</div>
+  return <div style={{padding:20}}><h2>My Orders</h2>{orders.map(o=><div key={o._id} onClick={()=>nav(`/order/${o._id}`)} style={{border:'1px solid #ddd', padding:12, marginBottom:8, borderRadius:8, background:'white', cursor:'pointer'}}><b>{Number(o.total)||0}$</b> - {sanitize(o.status)} - {o.items?.length || 0} items<br/><small>Ref: {sanitize(o.paystackRef)} - Click for details 👁️</small></div>)}{orders.length===0 && <p>No orders yet</p>}</div>
+}
+
+function OrderDetails(){
+  const { id } = useParams();
+  const [order,setOrder]=useState(null);
+  useEffect(()=>{
+    fetch(`${API}/api/orders/${id}`,{headers:{'x-auth-token':localStorage.getItem('token')}}).then(r=>r.json()).then(d=>setOrder(d)).catch(()=>setOrder(null));
+  },[id]);
+  if(!order) return <div style={{padding:20}}>Loading order...</div>;
+  return (
+    <div style={{padding:20, maxWidth:600, margin:'0 auto'}}>
+      <h2>Order Details</h2>
+      <div style={{border:'2px solid #0AA', padding:15, borderRadius:12, background:'white'}}>
+        <p><b>Order ID:</b> {order._id}</p>
+        <p><b>Ref:</b> {sanitize(order.paystackRef)}</p>
+        <p><b>Status:</b> <span style={{background: order.status==='Paid' ? 'lightgreen' : '#eee', padding:'2px 8px', borderRadius:4}}>{order.status}</span></p>
+        <p><b>Total:</b> ${order.total}</p>
+        <p><b>Email:</b> {order.email}</p>
+        <p><b>Date:</b> {new Date(order.createdAt).toLocaleString()}</p>
+        <h3>Items ({order.items?.length}):</h3>
+        {order.items?.map((it,i)=><div key={i} style={{display:'flex', justifyContent:'space-between', padding:8, borderBottom:'1px solid #eee'}}><span>{sanitize(it.name)}</span><b>${it.price}</b></div>)}
+      </div>
+      <Link to="/myorders" style={{display:'inline-block', marginTop:15, color:'#0AA'}}>← Back to My Orders</Link>
+    </div>
+  )
 }
 
 function Admin(){
-  const [orders,setOrders]=useState([]); const [name,setName]=useState(''); const [price,setPrice]=useState(''); const [image,setImage]=useState(''); const [category,setCategory]=useState('phones'); const [desc,setDesc]=useState(''); const [uploading,setUploading]=useState(false);
-  useEffect(()=>{ fetch(`${API}/api/orders/all`,{headers:{'x-auth-token':localStorage.getItem('token')}}).then(r=>r.json()).then(d=>Array.isArray(d)?setOrders(d):setOrders([])).catch(()=> setOrders([])); },[]);
+  const [orders,setOrders]=useState([]); 
+  const [products,setProducts]=useState([]);
+  const [name,setName]=useState(''); const [price,setPrice]=useState(''); const [image,setImage]=useState(''); const [category,setCategory]=useState('phones'); const [desc,setDesc]=useState(''); const [uploading,setUploading]=useState(false);
+
+  const fetchAll = ()=>{
+    fetch(`${API}/api/orders/all`,{headers:{'x-auth-token':localStorage.getItem('token')}}).then(r=>r.json()).then(d=>Array.isArray(d)?setOrders(d):setOrders([])).catch(()=>setOrders([]));
+    fetch(`${API}/api/products`).then(r=>r.json()).then(d=>Array.isArray(d)?setProducts(d):setProducts([])).catch(()=>setProducts([]));
+  };
+  useEffect(()=>{ fetchAll(); },[]);
+
   const handleFileUpload = async (e) => {
     const f = e.target.files[0]; if(!f) return;
     if(f.size > 2*1024*1024) return alert('Max 2MB');
@@ -246,20 +254,40 @@ function Admin(){
     try{ const res = await fetch(`${API}/api/upload`,{method:'POST',headers:{'x-auth-token':localStorage.getItem('token')},body:fd}); const data = await res.json(); if(data.path){ setImage(`${API}${data.path}`); alert('Uploaded ✅'); } else alert(data.msg || 'Upload failed'); }catch{ alert('Upload error') }
     setUploading(false);
   };
+
   const addProduct=async(e)=>{
     e.preventDefault(); 
     if(!image) return alert('Upload image first');
     try {
       const res = await fetch(`${API}/api/products`,{method:'POST',headers:{'Content-Type':'application/json','x-auth-token':localStorage.getItem('token')},body:JSON.stringify({name: sanitize(name), price:Number(price), image, category, description: sanitize(desc)})});
       const data = await res.json(); 
-      if(data._id){ alert('Product Added ✅'); setName('');setPrice('');setImage('');setDesc(''); } else alert(data.msg || 'Failed');
+      if(data._id){ alert('Product Added ✅'); setName('');setPrice('');setImage('');setDesc(''); fetchAll(); } else alert(data.msg || 'Failed');
     } catch { alert('Add failed'); }
   };
+
+  const deleteProduct = async (id, productName)=>{
+    if(!confirm(`Delete ${productName}?`)) return;
+    try {
+      const res = await fetch(`${API}/api/products/${id}`,{method:'DELETE', headers:{'x-auth-token':localStorage.getItem('token')}});
+      const data = await res.json();
+      if(res.ok){ alert('Deleted ✅'); setProducts(products.filter(p=>p._id!==id)); } else alert(data.msg || 'Delete failed - check backend route');
+    } catch { alert('Delete error - add DELETE route in backend'); }
+  };
+
+  const deleteOrder = async (id)=>{
+    if(!confirm('Delete this order?')) return;
+    try {
+      const res = await fetch(`${API}/api/orders/${id}`,{method:'DELETE', headers:{'x-auth-token':localStorage.getItem('token')}});
+      if(res.ok){ alert('Order deleted ✅'); setOrders(orders.filter(o=>o._id!==id)); } else alert('Delete failed');
+    } catch { alert('Delete error'); }
+  };
+
   const totalSales = orders.reduce((s,o)=>s+ (Number(o.total) || 0),0);
   return (
     <div style={{padding:20}}>
-      <h2>Admin - Orders ({orders.length}) - Sales ${totalSales}</h2>
-      <form onSubmit={addProduct} style={{border:'2px dashed #888', padding:15, maxWidth:450, borderRadius:12, background:'white'}}>
+      <h2>Admin - Orders ({orders.length}) - Sales ${totalSales} - Products ({products.length})</h2>
+      
+      <form onSubmit={addProduct} style={{border:'2px dashed #888', padding:15, maxWidth:450, borderRadius:12, background:'white', marginBottom:20}}>
         <h3>Add Product</h3>
         <input value={name} onChange={e=>setName(e.target.value)} placeholder="Product Name" required/>
         <select value={category} onChange={e=>setCategory(e.target.value)} style={{padding:8, margin:'6px 0'}}><option value="phones">phones</option><option value="laptops">laptops</option><option value="shirts">shirts</option><option value="watches">watches</option><option value="headphones">headphones</option><option value="gaming">gaming</option><option value="accessories">accessories</option></select>
@@ -270,6 +298,31 @@ function Admin(){
         {image && <img src={image} alt="preview" style={{width:120, height:120, objectFit:'cover', marginTop:8}}/>}
         <button type="submit" style={{marginTop:10}}>Add Product</button>
       </form>
+
+      <h3>🛒 All Products - Click 🗑️ to Delete</h3>
+      <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:10, marginBottom:30}}>
+        {products.map(p=>(
+          <div key={p._id} style={{border:'1px solid #ddd', padding:10, borderRadius:8, background:'white'}}>
+            <img src={p.image?.startsWith('/uploads') ? `${API}${p.image}` : p.image} style={{width:'100%', height:120, objectFit:'cover', borderRadius:6}} alt=""/>
+            <p style={{margin:'6px 0', fontWeight:'bold'}}>{sanitize(p.name)}</p>
+            <p>${p.price} - {p.category}</p>
+            <button onClick={()=>deleteProduct(p._id, p.name)} style={{width:'100%', background:'#FF4444', color:'white', padding:6, borderRadius:6, border:'none', cursor:'pointer'}}>🗑️ Delete Product</button>
+          </div>
+        ))}
+      </div>
+
+      <h3>📦 All Orders - Click for Details</h3>
+      <div style={{display:'grid', gap:8}}>
+        {orders.map(o=>(
+          <div key={o._id} style={{border:'1px solid #ddd', padding:10, borderRadius:8, background:'white', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+            <div>
+              <Link to={`/order/${o._id}`} style={{fontWeight:'bold', color:'#0AA'}}>{o.total}$ - {o.status} - {sanitize(o.email)}</Link>
+              <div style={{fontSize:12}}>Ref: {sanitize(o.paystackRef)} - {o.items?.length} items - {new Date(o.createdAt).toLocaleDateString()}</div>
+            </div>
+            <button onClick={()=>deleteOrder(o._id)} style={{background:'#FF4444', color:'white', padding:'4px 8px', borderRadius:4, border:'none', cursor:'pointer'}}>🗑️</button>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -299,6 +352,7 @@ export default function App(){
           <Route path="/register" element={<Register/>}/>
           <Route path="/cart" element={<ProtectedRoute><Cart/></ProtectedRoute>}/>
           <Route path="/myorders" element={<ProtectedRoute><MyOrders/></ProtectedRoute>}/>
+          <Route path="/order/:id" element={<ProtectedRoute><OrderDetails/></ProtectedRoute>}/>
           <Route path="/admin" element={<ProtectedRoute adminOnly><Admin/></ProtectedRoute>}/>
         </Routes>
       </BrowserRouter>

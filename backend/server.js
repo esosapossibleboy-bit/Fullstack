@@ -17,10 +17,11 @@ const app = express();
 app.use(helmet());
 app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
 
-// === 2. CORS WHITELIST ===
+// === 2. CORS WHITELIST - UPDATED FOR YOUR NEW VERCEL ===
 const allowedOrigins = [
   'https://esosa-shop.vercel.app',
-  'https://esosa-shop-7a64-6wtdrxqj9-esosas-projects-6d0f9da7.vercel.app',
+  'https://fullstack-orpin-three.vercel.app',
+  'https://fullstack-lake-seven.vercel.app',
   'http://localhost:5173',
   'http://localhost:3000'
 ];
@@ -38,7 +39,7 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(express.json({ limit: '10kb' })); // block large payload
+app.use(express.json({ limit: '10kb' }));
 if (!fs.existsSync('uploads')) fs.mkdirSync('uploads');
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -95,7 +96,7 @@ const Product = mongoose.model('Product', new mongoose.Schema({
 }));
 
 const Order = mongoose.model('Order', new mongoose.Schema({
-  userId: String, userEmail: String, items: Array, total: {type:Number, min:0}, status: { type: String, default: 'Paid' }, paystackRef: String
+  userId: String, userEmail: String, items: Array, total: {type:Number, min:0}, status: { type: String, default: 'Paid' }, paystackRef: String, email: String
 }, { timestamps: true }));
 
 const auth = (req,res,next)=>{
@@ -208,7 +209,7 @@ app.post('/api/pay/verify', auth, async (req,res)=>{
         try{
           const result = JSON.parse(data);
           if(result.data && result.data.status==='success' && result.data.amount >= total*100 - 100){
-            const order = await Order.create({userId:req.user.id, userEmail:email, items, total, paystackRef:reference, status:'Paid'});
+            const order = await Order.create({userId:req.user.id, userEmail:email, email, items, total, paystackRef:reference, status:'Paid'});
             return res.json(order);
           } else {
             return res.status(400).json({msg:'Payment not verified'});
@@ -222,16 +223,37 @@ app.post('/api/pay/verify', auth, async (req,res)=>{
 });
 
 app.get('/api/orders/my', auth, async (req,res)=> res.json(await Order.find({userId:req.user.id}).sort({createdAt:-1})));
+
 app.get('/api/orders/all', auth, async (req,res)=>{
   if(req.user.isAdmin!==true) return res.status(403).json({msg:'Admin only'});
   res.json(await Order.find().sort({createdAt:-1}));
 });
 
-app.get('/', (req,res)=> res.send('Esosa API Secure Live - No Backdoor ✅'));
+// === NEW ROUTES - ORDER DETAILS + DELETE ORDER ===
+app.get('/api/orders/:id', auth, async (req,res)=>{
+  try{
+    const order = await Order.findById(req.params.id);
+    if(!order) return res.status(404).json({msg:'Order not found'});
+    // User can see own order, admin can see all
+    if(order.userId !== req.user.id && req.user.isAdmin !== true){
+      return res.status(403).json({msg:'Not your order'});
+    }
+    res.json(order);
+  }catch{ res.status(500).json({msg:'Error fetching order'}) }
+});
 
-// === NEW SECURE ERROR HANDLER - FIXES YOUR 1 FAIL ===
+app.delete('/api/orders/:id', auth, async (req,res)=>{
+  try{
+    if(req.user.isAdmin!==true) return res.status(403).json({msg:'Admin only'});
+    await Order.findByIdAndDelete(req.params.id);
+    res.json({msg:'Order deleted ✅'});
+  }catch{ res.status(500).json({msg:'Delete failed'}) }
+});
+
+app.get('/', (req,res)=> res.send('Esosa API Secure Live - Delete + Details Added ✅'));
+
+// === ERROR HANDLER ===
 app.use((err, req, res, next)=>{
-  // FIX 1: Large payload -> 413 not 500
   if(err.type === 'entity.too.large' || err.status === 413 || err.message.includes('too large')){
     return res.status(413).json({msg:'Payload too large - Max 10kb blocked'});
   }
@@ -246,4 +268,4 @@ app.use((err, req, res, next)=>{
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, ()=> console.log(`🔒 SECURE Server Live on ${PORT} - All Tests Will PASS ✅`));
+app.listen(PORT, ()=> console.log(`🔒 SECURE Server Live on ${PORT} - Delete + Order Details Ready ✅`));
